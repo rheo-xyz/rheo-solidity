@@ -33,7 +33,10 @@
     "rev": "4a328b8d2637a48ac9f7cb74549cc93eb073d2ff"
   },
   "lib/safe-utils": {
-    "rev": "efbc187751c99eb20d5019509fb1c5c353d0cb0c"
+    "tag": {
+      "name": "v0.0.16",
+      "rev": "506cf9f38efa42a76c9b56dba5cc446adb2582ca"
+    }
   },
   "lib/solady": {
     "rev": "b3d4ad97035a8b9b7b661763c6aed51fcfe5a87a"
