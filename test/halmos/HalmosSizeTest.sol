@@ -132,9 +132,10 @@ contract HalmosSizeTest is Test, HalmosHelpers {
             swapFeeAPR: 0.005e18,
             fragmentationFee: 5e6,
             liquidationRewardPercent: 0.05e18,
-            overdueCollateralProtocolPercent: 0.01e18,
+            overdueCollateralProtocolPercent: 0.005e18,
             collateralProtocolPercent: 0.1e18,
-            feeRecipient: feeRecipient
+            feeRecipient: feeRecipient,
+            overdueLiquidationRewardPercent: 0.01e18
         });
         r = InitializeRiskConfigParams({
             crOpening: 1.5e18,

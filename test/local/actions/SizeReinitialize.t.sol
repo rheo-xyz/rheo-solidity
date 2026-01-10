@@ -16,30 +16,30 @@ contract SizeReinitializeTest is BaseTest {
     function test_Size_reinitialize_success() public {
         // Only DEFAULT_ADMIN_ROLE can call reinitialize
         vm.prank(admin);
-        size.reinitialize(0.12e18);
+        size.reinitialize(0.01e18);
 
-        assertEq(_overdueLiquidationRewardPercent(), 0.12e18);
+        assertEq(_overdueLiquidationRewardPercent(), 0.01e18);
     }
 
     function test_Size_reinitialize_reverts_unauthorized() public {
         // Should revert when called by non-admin
         vm.prank(alice);
         vm.expectRevert();
-        size.reinitialize(0.12e18);
+        size.reinitialize(0.01e18);
 
         vm.prank(bob);
         vm.expectRevert();
-        size.reinitialize(0.12e18);
+        size.reinitialize(0.01e18);
 
         vm.prank(candy);
         vm.expectRevert();
-        size.reinitialize(0.12e18);
+        size.reinitialize(0.01e18);
     }
 
     function test_Size_reinitialize_multiple_calls() public {
         // First call should succeed
         vm.prank(admin);
-        size.reinitialize(0.12e18);
+        size.reinitialize(0.01e18);
 
         // Second call should fail (already initialized to version 1.08.03)
         vm.prank(admin);

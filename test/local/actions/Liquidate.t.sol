@@ -133,7 +133,7 @@ contract LiquidateTest is BaseTest {
         _updateConfig("minTenor", 1);
         _updateConfig("maxTenor", 10 * 365 days);
         _updateConfig("swapFeeAPR", 0);
-        _updateConfig("overdueCollateralProtocolPercent", 0.123e18);
+        _updateConfig("overdueCollateralProtocolPercent", 0.005e18);
         _updateConfig("crLiquidation", 1.2e18);
         _setPrice(1e18);
         _deposit(alice, usdc, 100e6);
@@ -195,8 +195,8 @@ contract LiquidateTest is BaseTest {
         _updateConfig("minTenor", 1);
         _updateConfig("maxTenor", 10 * 365 days);
         _updateConfig("swapFeeAPR", 0);
-        _updateConfig("overdueCollateralProtocolPercent", 0.1e18);
-        _updateConfig("overdueLiquidationRewardPercent", 0.2e18);
+        _updateConfig("overdueCollateralProtocolPercent", 0.005e18);
+        _updateConfig("overdueLiquidationRewardPercent", 0.01e18);
         _updateConfig("crLiquidation", 1.2e18);
         _setPrice(1e18);
 
@@ -292,7 +292,7 @@ contract LiquidateTest is BaseTest {
             _after.feeRecipient.collateralTokenBalance, _before.feeRecipient.collateralTokenBalance + protocolSplit
         );
         assertEq(liquidatorProfitCollateralToken, (100 + 5) * 1e18);
-        assertEq(protocolSplit, 0.3e18, 0.01e18 * 30e18 / 1e18);
+        assertEq(protocolSplit, 0.15e18, 0.005e18 * 30e18 / 1e18);
         assertEq(
             _after.liquidator.collateralTokenBalance,
             _before.liquidator.collateralTokenBalance + liquidatorProfitCollateralToken
