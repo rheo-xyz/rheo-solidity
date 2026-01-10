@@ -39,6 +39,4 @@ struct DataView {
     NonTransferrableToken debtToken;
     // The variable pool
     IPool variablePool;
-    // The overdue liquidation reward percent
-    uint256 overdueLiquidationRewardPercent;
 }

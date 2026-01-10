@@ -98,6 +98,11 @@ library Initialize {
             revert Errors.INVALID_COLLATERAL_PERCENTAGE_PREMIUM(f.collateralProtocolPercent);
         }
 
+        // validate overdueLiquidationRewardPercent
+        if (f.overdueLiquidationRewardPercent > PERCENT) {
+            revert Errors.INVALID_COLLATERAL_PERCENTAGE_PREMIUM(f.overdueLiquidationRewardPercent);
+        }
+
         // validate feeRecipient
         if (f.feeRecipient == address(0)) {
             revert Errors.NULL_ADDRESS();
@@ -272,6 +277,7 @@ library Initialize {
         state.data.sizeFactory = ISizeFactory(d.sizeFactory);
         state.data.borrowTokenVault = NonTransferrableRebasingTokenVault(d.borrowTokenVault);
         state.data.debtTokenCap = type(uint256).max;
+        state.data.overdueLiquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
     }
 
     /// @notice Executes the initialization of the protocol
@@ -293,6 +299,5 @@ library Initialize {
         executeInitializeRiskConfig(state, r);
         executeInitializeOracle(state, o);
         executeInitializeData(state, d);
-        state.data.overdueLiquidationRewardPercent = f.liquidationRewardPercent;
     }
 }

@@ -101,15 +101,12 @@ library Liquidate {
 
         // profitable liquidation
         if (assignedCollateral > debtInCollateralToken) {
+            uint256 liquidationRewardPercent = loanStatus == LoanStatus.OVERDUE
+                ? state.data.overdueLiquidationRewardPercent
+                : state.feeConfig.liquidationRewardPercent;
             uint256 liquidatorReward = Math.min(
                 assignedCollateral - debtInCollateralToken,
-                Math.mulDivUp(
-                    debtInCollateralToken,
-                    loanStatus == LoanStatus.OVERDUE
-                        ? state.data.overdueLiquidationRewardPercent
-                        : state.feeConfig.liquidationRewardPercent,
-                    PERCENT
-                )
+                Math.mulDivUp(debtInCollateralToken, liquidationRewardPercent, PERCENT)
             );
             liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 

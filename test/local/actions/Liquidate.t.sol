@@ -11,6 +11,7 @@ import {PERCENT} from "@src/market/libraries/Math.sol";
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 
 contract LiquidateTest is BaseTest {
+    uint256 private constant OVERDUE_LIQUIDATION_REWARD_SLOT = 30;
     function test_Liquidate_liquidate_repays_loan() public {
         _setPrice(1e18);
 
@@ -155,7 +156,7 @@ contract LiquidateTest is BaseTest {
         uint256 debtInCollateralToken = size.debtTokenAmountToCollateralTokenAmount(futureValue);
         uint256 liquidatorReward = Math.min(
             _before.bob.collateralTokenBalance - debtInCollateralToken,
-            Math.mulDivUp(debtInCollateralToken, size.data().overdueLiquidationRewardPercent, PERCENT)
+            Math.mulDivUp(debtInCollateralToken, _overdueLiquidationRewardPercent(), PERCENT)
         );
         uint256 liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -215,7 +216,7 @@ contract LiquidateTest is BaseTest {
         uint256 debtInCollateralToken = size.debtTokenAmountToCollateralTokenAmount(futureValue);
         uint256 liquidatorReward = Math.min(
             _before.bob.collateralTokenBalance - debtInCollateralToken,
-            Math.mulDivUp(debtInCollateralToken, size.data().overdueLiquidationRewardPercent, PERCENT)
+            Math.mulDivUp(debtInCollateralToken, _overdueLiquidationRewardPercent(), PERCENT)
         );
         uint256 liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -265,7 +266,7 @@ contract LiquidateTest is BaseTest {
         uint256 debtInCollateralToken = size.debtTokenAmountToCollateralTokenAmount(futureValue);
         uint256 liquidatorReward = Math.min(
             _state().bob.collateralTokenBalance - debtInCollateralToken,
-            Math.mulDivUp(debtInCollateralToken, size.data().overdueLiquidationRewardPercent, PERCENT)
+            Math.mulDivUp(debtInCollateralToken, _overdueLiquidationRewardPercent(), PERCENT)
         );
         uint256 liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -348,7 +349,7 @@ contract LiquidateTest is BaseTest {
         uint256 debtInCollateralToken = size.debtTokenAmountToCollateralTokenAmount(futureValue);
         uint256 liquidatorReward = Math.min(
             _state().bob.collateralTokenBalance - debtInCollateralToken,
-            Math.mulDivUp(debtInCollateralToken, size.data().overdueLiquidationRewardPercent, PERCENT)
+            Math.mulDivUp(debtInCollateralToken, _overdueLiquidationRewardPercent(), PERCENT)
         );
         uint256 liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -482,5 +483,9 @@ contract LiquidateTest is BaseTest {
             _deposit(liquidator, usdc, 10_000e6);
             _liquidate(liquidator, debtPositionId);
         }
+    }
+
+    function _overdueLiquidationRewardPercent() internal view returns (uint256) {
+        return uint256(size.extSload(bytes32(OVERDUE_LIQUIDATION_REWARD_SLOT)));
     }
 }

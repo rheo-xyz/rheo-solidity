@@ -88,8 +88,7 @@ abstract contract SizeView is SizeStorage, ReentrancyGuardUpgradeableWithViewMod
             variablePool: state.data.variablePool,
             collateralToken: state.data.collateralToken,
             borrowTokenVault: state.data.borrowTokenVault,
-            debtToken: state.data.debtToken,
-            overdueLiquidationRewardPercent: state.data.overdueLiquidationRewardPercent
+            debtToken: state.data.debtToken
         });
     }
 

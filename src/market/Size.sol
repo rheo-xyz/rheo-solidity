@@ -154,7 +154,7 @@ contract Size is
     function reinitialize(uint256 overdueLiquidationRewardPercent)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
-        reinitializer(1_08_04)
+        reinitializer(1_08_03)
     {
         state.data.overdueLiquidationRewardPercent = overdueLiquidationRewardPercent;
     }

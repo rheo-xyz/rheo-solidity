@@ -6,6 +6,7 @@ import {BaseTest} from "@test/BaseTest.sol";
 
 contract SizeReinitializeTest is BaseTest {
     address admin;
+    uint256 private constant OVERDUE_LIQUIDATION_REWARD_SLOT = 30;
 
     function setUp() public override {
         super.setUp();
@@ -17,7 +18,7 @@ contract SizeReinitializeTest is BaseTest {
         vm.prank(admin);
         size.reinitialize(0.12e18);
 
-        assertEq(size.data().overdueLiquidationRewardPercent, 0.12e18);
+        assertEq(_overdueLiquidationRewardPercent(), 0.12e18);
     }
 
     function test_Size_reinitialize_reverts_unauthorized() public {
@@ -40,7 +41,7 @@ contract SizeReinitializeTest is BaseTest {
         vm.prank(admin);
         size.reinitialize(0.12e18);
 
-        // Second call should fail (already initialized to version 1.08.04)
+        // Second call should fail (already initialized to version 1.08.03)
         vm.prank(admin);
         vm.expectRevert();
         size.reinitialize(0.12e18);
@@ -54,5 +55,9 @@ contract SizeReinitializeTest is BaseTest {
         // Alice should be able to call reinitialize
         vm.prank(alice);
         size.reinitialize(0.12e18);
+    }
+
+    function _overdueLiquidationRewardPercent() internal view returns (uint256) {
+        return uint256(size.extSload(bytes32(OVERDUE_LIQUIDATION_REWARD_SLOT)));
     }
 }
