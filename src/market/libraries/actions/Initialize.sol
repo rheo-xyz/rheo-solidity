@@ -34,6 +34,7 @@ struct InitializeFeeConfigParams {
     uint256 overdueCollateralProtocolPercent;
     uint256 collateralProtocolPercent;
     address feeRecipient;
+    uint256 overdueLiquidationRewardPercent;
 }
 
 struct InitializeRiskConfigParams {
@@ -292,5 +293,6 @@ library Initialize {
         executeInitializeRiskConfig(state, r);
         executeInitializeOracle(state, o);
         executeInitializeData(state, d);
+        state.data.overdueLiquidationRewardPercent = f.liquidationRewardPercent;
     }
 }

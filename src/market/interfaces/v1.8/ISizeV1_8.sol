@@ -10,8 +10,9 @@ import {SetVaultOnBehalfOfParams} from "@src/market/libraries/actions/SetVault.s
 /// @notice The interface for the Size v1.8 view methods
 interface ISizeV1_8 {
     /// @notice Reinitialize the contract
-    /// @dev Initializes the debt token cap
-    function reinitialize() external;
+    /// @dev Sets the overdue liquidation reward percent
+    /// @param overdueLiquidationRewardPercent The overdue liquidation reward percent (1e18)
+    function reinitialize(uint256 overdueLiquidationRewardPercent) external;
 
     /// @notice Set the vault for a user
     /// @param params SetVaultParams struct containing the following fields:

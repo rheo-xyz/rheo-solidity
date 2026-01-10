@@ -41,6 +41,10 @@ contract UpdateConfigTest is BaseTest {
         size.updateConfig(UpdateConfigParams({key: "collateralProtocolPercent", value: 0.456e18}));
         assertTrue(size.feeConfig().collateralProtocolPercent == 0.456e18);
 
+        assertTrue(size.data().overdueLiquidationRewardPercent != 0.077e18);
+        size.updateConfig(UpdateConfigParams({key: "overdueLiquidationRewardPercent", value: 0.077e18}));
+        assertTrue(size.data().overdueLiquidationRewardPercent == 0.077e18);
+
         assertTrue(size.feeConfig().feeRecipient != address(this));
         size.updateConfig(UpdateConfigParams({key: "feeRecipient", value: uint256(uint160(address(this)))}));
         assertTrue(size.feeConfig().feeRecipient == address(this));
