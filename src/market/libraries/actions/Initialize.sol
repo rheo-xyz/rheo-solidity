@@ -34,7 +34,6 @@ struct InitializeFeeConfigParams {
     uint256 overdueCollateralProtocolPercent;
     uint256 collateralProtocolPercent;
     address feeRecipient;
-    uint256 overdueLiquidationRewardPercent;
 }
 
 struct InitializeRiskConfigParams {
@@ -96,11 +95,6 @@ library Initialize {
         // validate collateralProtocolPercent
         if (f.collateralProtocolPercent > PERCENT) {
             revert Errors.INVALID_COLLATERAL_PERCENTAGE_PREMIUM(f.collateralProtocolPercent);
-        }
-
-        // validate overdueLiquidationRewardPercent
-        if (f.overdueLiquidationRewardPercent > PERCENT) {
-            revert Errors.INVALID_COLLATERAL_PERCENTAGE_PREMIUM(f.overdueLiquidationRewardPercent);
         }
 
         // validate feeRecipient

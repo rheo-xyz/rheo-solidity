@@ -166,8 +166,7 @@ abstract contract Deploy {
             liquidationRewardPercent: 0.05e18,
             overdueCollateralProtocolPercent: 0.005e18,
             collateralProtocolPercent: 0.1e18,
-            feeRecipient: feeRecipient,
-            overdueLiquidationRewardPercent: 0.01e18
+            feeRecipient: feeRecipient
         });
         r = InitializeRiskConfigParams({
             crOpening: 1.5e18,
@@ -268,8 +267,7 @@ abstract contract Deploy {
             liquidationRewardPercent: 0.05e18,
             overdueCollateralProtocolPercent: 0.005e18,
             collateralProtocolPercent: 0.1e18,
-            feeRecipient: feeRecipient,
-            overdueLiquidationRewardPercent: 0.01e18
+            feeRecipient: feeRecipient
         });
         r = InitializeRiskConfigParams({
             crOpening: 1.5e18,

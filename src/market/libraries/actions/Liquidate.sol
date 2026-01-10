@@ -86,12 +86,14 @@ library Liquidate {
         DebtPosition storage debtPosition = state.getDebtPosition(params.debtPositionId);
         LoanStatus loanStatus = state.getLoanStatus(params.debtPositionId);
 
+        uint256 collateralRatio = state.collateralRatio(debtPosition.borrower);
+
         emit Events.Liquidate(
             msg.sender,
             params.debtPositionId,
             params.minimumCollateralProfit,
             params.deadline,
-            state.collateralRatio(debtPosition.borrower),
+            collateralRatio,
             uint8(loanStatus)
         );
 
@@ -120,13 +122,12 @@ library Liquidate {
 
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
 
-            protocolProfitCollateralToken = Math.mulDivDown(
-                collateralRemainder,
-                state.isUserUnderwater(debtPosition.borrower)
-                    ? state.feeConfig.collateralProtocolPercent
-                    : state.feeConfig.overdueCollateralProtocolPercent,
-                PERCENT
-            );
+            uint256 collateralProtocolPercent = loanStatus == LoanStatus.OVERDUE
+                ? state.feeConfig.overdueCollateralProtocolPercent
+                : state.feeConfig.collateralProtocolPercent;
+
+            protocolProfitCollateralToken =
+                Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;

@@ -46,8 +46,7 @@ library UpdateConfig {
             liquidationRewardPercent: state.feeConfig.liquidationRewardPercent,
             overdueCollateralProtocolPercent: state.feeConfig.overdueCollateralProtocolPercent,
             collateralProtocolPercent: state.feeConfig.collateralProtocolPercent,
-            feeRecipient: state.feeConfig.feeRecipient,
-            overdueLiquidationRewardPercent: state.data.overdueLiquidationRewardPercent
+            feeRecipient: state.feeConfig.feeRecipient
         });
     }
 
@@ -127,6 +126,9 @@ library UpdateConfig {
         } else if (Strings.equal(params.key, "liquidationRewardPercent")) {
             state.feeConfig.liquidationRewardPercent = params.value;
         } else if (Strings.equal(params.key, "overdueLiquidationRewardPercent")) {
+            if (params.value > PERCENT) {
+                revert Errors.INVALID_COLLATERAL_PERCENTAGE_PREMIUM(params.value);
+            }
             state.data.overdueLiquidationRewardPercent = params.value;
         } else if (Strings.equal(params.key, "overdueCollateralProtocolPercent")) {
             state.feeConfig.overdueCollateralProtocolPercent = params.value;
