@@ -5,9 +5,9 @@ import {ForkTest} from "@test/fork/ForkTest.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Size} from "@src/market/Size.sol";
 import {LiquidateParams} from "@src/market/libraries/actions/Liquidate.sol";
 import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
+import {ProposeSafeTxUpgradeToV1_8_3Script} from "@script/ProposeSafeTxUpgradeToV1_8_3.s.sol";
 
 struct LegacyFeeConfig {
     uint256 swapFeeAPR;
@@ -75,8 +75,8 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
     }
 
     function testFork_overdueLiquidationRewardPercentImpact() public {
-        Outcome memory current = _replayAndMeasure(false, 0);
-        Outcome memory upgraded = _replayAndMeasure(true, 0.01e18);
+        Outcome memory current = _replayAndMeasure(false);
+        Outcome memory upgraded = _replayAndMeasure(true);
 
         assertEq(current.borrower, upgraded.borrower);
         assertEq(current.liquidator, upgraded.liquidator);
@@ -85,10 +85,10 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         assertGe(upgraded.protocolDelta, current.protocolDelta);
     }
 
-    function _replayAndMeasure(bool doUpgrade, uint256 overdueRewardPercent) internal returns (Outcome memory outcome) {
+    function _replayAndMeasure(bool doUpgrade) internal returns (Outcome memory outcome) {
         uint256 snapshot = vm.snapshot();
         if (doUpgrade) {
-            _upgradeAndReinitialize(overdueRewardPercent);
+            _upgradeToV1_8_3();
         }
         _setOverdueProtocolSplit();
 
@@ -103,7 +103,7 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
 
         vm.revertTo(snapshot);
         if (doUpgrade) {
-            _upgradeAndReinitialize(overdueRewardPercent);
+            _upgradeToV1_8_3();
         }
         _setOverdueProtocolSplit();
 
@@ -160,13 +160,18 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         vm.stopPrank();
     }
 
-    function _upgradeAndReinitialize(uint256 overdueRewardPercent) internal {
-        Size newImplementation = new Size();
-        vm.prank(owner);
-        Size(address(size)).upgradeToAndCall(address(newImplementation), "");
-
-        vm.prank(owner);
-        size.reinitialize(overdueRewardPercent);
+    function _upgradeToV1_8_3() internal {
+        ProposeSafeTxUpgradeToV1_8_3Script script = new ProposeSafeTxUpgradeToV1_8_3Script();
+        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_8_3Data();
+        for (uint256 i = 0; i < targets.length; i++) {
+            if (targets[i] == address(size)) {
+                vm.prank(owner);
+                (bool ok,) = targets[i].call(datas[i]);
+                assertTrue(ok);
+                return;
+            }
+        }
+        revert("upgrade data not found");
     }
 
     function _setOverdueProtocolSplit() internal {
