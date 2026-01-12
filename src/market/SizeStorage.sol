@@ -111,7 +111,7 @@ struct Data {
     ISizeFactory sizeFactory;
     // debtTokenCap (added in v1.8.2)
     uint256 debtTokenCap;
-    // percent of the futureValue to be given to the liquidator for overdue liquidations (added in v1.8.4)
+    // percent of the futureValue to be given to the liquidator for overdue liquidations (added in v1.8.3)
     uint256 overdueLiquidationRewardPercent;
 }
 
