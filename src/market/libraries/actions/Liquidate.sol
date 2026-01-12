@@ -126,8 +126,7 @@ library Liquidate {
                 ? state.feeConfig.overdueCollateralProtocolPercent
                 : state.feeConfig.collateralProtocolPercent;
 
-            protocolProfitCollateralToken =
-                Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
+            protocolProfitCollateralToken = Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;

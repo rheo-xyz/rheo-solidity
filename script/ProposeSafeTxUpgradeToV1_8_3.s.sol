@@ -24,6 +24,7 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
     ICollectionsManager private collectionsManager;
 
     uint256 private constant OVERDUE_LIQUIDATION_REWARD_PERCENT = 0.01e18;
+    uint256 private constant OVERDUE_COLLATERAL_PROTOCOL_PERCENT = 0.001e18;
 
     modifier parseEnv() {
         safe.initialize(vm.envAddress("OWNER"));
@@ -63,7 +64,10 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
                 UUPSUpgradeable.upgradeToAndCall,
                 (
                     address(newSizeImplementation),
-                    abi.encodeCall(ISizeV1_8.reinitialize, (OVERDUE_LIQUIDATION_REWARD_PERCENT))
+                    abi.encodeCall(
+                        ISizeV1_8.reinitialize,
+                        (OVERDUE_LIQUIDATION_REWARD_PERCENT, OVERDUE_COLLATERAL_PROTOCOL_PERCENT)
+                    )
                 )
             );
         }

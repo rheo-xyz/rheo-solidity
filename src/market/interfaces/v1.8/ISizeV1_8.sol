@@ -12,7 +12,7 @@ interface ISizeV1_8 {
     /// @notice Reinitialize the contract
     /// @dev Sets the overdue liquidation reward percent
     /// @param overdueLiquidationRewardPercent The overdue liquidation reward percent (1e18)
-    function reinitialize(uint256 overdueLiquidationRewardPercent) external;
+    function reinitialize(uint256 overdueLiquidationRewardPercent, uint256 overdueCollateralProtocolPercent) external;
 
     /// @notice Set the vault for a user
     /// @param params SetVaultParams struct containing the following fields:
