@@ -11,8 +11,6 @@ import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol
 import {Size} from "@src/market/Size.sol";
 
 contract UpdateConfigTest is BaseTest {
-    uint256 private constant OVERDUE_LIQUIDATION_REWARD_SLOT = 30;
-
     function test_UpdateConfig_updateConfig_reverts_if_not_owner() public {
         vm.startPrank(alice);
 
@@ -59,7 +57,4 @@ contract UpdateConfigTest is BaseTest {
         assertTrue(size.oracle().priceFeed == address(newPriceFeed));
     }
 
-    function _overdueLiquidationRewardPercent() internal view returns (uint256) {
-        return uint256(size.extSload(bytes32(OVERDUE_LIQUIDATION_REWARD_SLOT)));
-    }
 }

@@ -11,7 +11,6 @@ import {PERCENT} from "@src/market/libraries/Math.sol";
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 
 contract LiquidateTest is BaseTest {
-    uint256 private constant OVERDUE_LIQUIDATION_REWARD_SLOT = 30;
     function test_Liquidate_liquidate_repays_loan() public {
         _setPrice(1e18);
 
@@ -133,7 +132,7 @@ contract LiquidateTest is BaseTest {
         _updateConfig("minTenor", 1);
         _updateConfig("maxTenor", 10 * 365 days);
         _updateConfig("swapFeeAPR", 0);
-        _updateConfig("overdueCollateralProtocolPercent", 0.005e18);
+        _updateConfig("overdueCollateralProtocolPercent", 0.123e18);
         _updateConfig("crLiquidation", 1.2e18);
         _setPrice(1e18);
         _deposit(alice, usdc, 100e6);
@@ -485,7 +484,4 @@ contract LiquidateTest is BaseTest {
         }
     }
 
-    function _overdueLiquidationRewardPercent() internal view returns (uint256) {
-        return uint256(size.extSload(bytes32(OVERDUE_LIQUIDATION_REWARD_SLOT)));
-    }
 }
