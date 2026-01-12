@@ -97,6 +97,17 @@ library Liquidate {
             uint8(loanStatus)
         );
 
+        // if the loan is both underwater and overdue, the protocol fee related to underwater liquidations takes precedence
+        uint256 collateralProtocolPercent;
+        uint256 liquidationRewardPercent;
+        if(state.isUserUnderwater(debtPosition.borrower)) {
+            collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
+            liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
+        } else {
+            collateralProtocolPercent = state.feeConfig.overdueCollateralProtocolPercent;
+            liquidationRewardPercent = state.data.overdueLiquidationRewardPercent;
+        }
+
         uint256 assignedCollateral = state.getDebtPositionAssignedCollateral(debtPosition);
         uint256 debtInCollateralToken = state.debtTokenAmountToCollateralTokenAmount(debtPosition.futureValue);
         uint256 protocolProfitCollateralToken = 0;
@@ -115,16 +126,12 @@ library Liquidate {
             // the protocol earns a portion of the collateral remainder
             uint256 collateralRemainder = assignedCollateral - liquidatorProfitCollateralToken;
 
-            // cap the collateral remainder to FV * (1 - crLiquidation)
+            // cap the collateral remainder to FV * (crLiquidation - 1)
             //   otherwise, the split for non-underwater overdue loans could be too much
             uint256 collateralRemainderCap =
                 Math.mulDivDown(debtInCollateralToken, state.riskConfig.crLiquidation - PERCENT, PERCENT);
 
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
-
-            uint256 collateralProtocolPercent = loanStatus == LoanStatus.OVERDUE
-                ? state.feeConfig.overdueCollateralProtocolPercent
-                : state.feeConfig.collateralProtocolPercent;
 
             protocolProfitCollateralToken = Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
         } else {
