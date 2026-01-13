@@ -56,8 +56,8 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
         Size newSizeImplementation = new Size();
         console.log("ProposeSafeTxUpgradeToV1_8_3Script: newSizeImplementation", address(newSizeImplementation));
 
-        targets = new address[](unpausedMarkets.length);
-        datas = new bytes[](unpausedMarkets.length);
+        targets = new address[](unpausedMarkets.length + 1);
+        datas = new bytes[](unpausedMarkets.length + 1);
         for (uint256 i = 0; i < unpausedMarkets.length; i++) {
             targets[i] = address(unpausedMarkets[i]);
             datas[i] = abi.encodeCall(
@@ -71,5 +71,10 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
                 )
             );
         }
+        targets[unpausedMarkets.length] = address(sizeFactory);
+        datas[unpausedMarkets.length] = abi.encodeCall(
+            SizeFactory.setSizeImplementation,
+            (address(newSizeImplementation))
+        );
     }
 }
