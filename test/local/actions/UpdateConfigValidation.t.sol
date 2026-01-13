@@ -4,8 +4,8 @@ pragma solidity 0.8.23;
 import {BaseTest} from "@test/BaseTest.sol";
 
 import {Errors} from "@src/market/libraries/Errors.sol";
-import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
 import {PERCENT} from "@src/market/libraries/Math.sol";
+import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
 
 contract UpdateConfigValidationTest is BaseTest {
     function test_UpdateConfig_validation() public {
