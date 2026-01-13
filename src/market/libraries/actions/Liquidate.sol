@@ -103,14 +103,13 @@ library Liquidate {
         );
 
         // if the loan is both underwater and overdue, the protocol fee related to underwater liquidations takes precedence
-        uint256 collateralProtocolPercent;
-        uint256 liquidationRewardPercent;
+        LiquidateVars memory vars = LiquidateVars({collateralProtocolPercent: 0, liquidationRewardPercent: 0});
         if (state.isUserUnderwater(debtPosition.borrower)) {
-            collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
-            liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
+            vars.collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
+            vars.liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
         } else {
-            collateralProtocolPercent = state.feeConfig.overdueCollateralProtocolPercent;
-            liquidationRewardPercent = state.data.overdueLiquidationRewardPercent;
+            vars.collateralProtocolPercent = state.feeConfig.overdueCollateralProtocolPercent;
+            vars.liquidationRewardPercent = state.data.overdueLiquidationRewardPercent;
         }
 
         uint256 assignedCollateral = state.getDebtPositionAssignedCollateral(debtPosition);
@@ -121,7 +120,7 @@ library Liquidate {
         if (assignedCollateral > debtInCollateralToken) {
             uint256 liquidatorReward = Math.min(
                 assignedCollateral - debtInCollateralToken,
-                Math.mulDivUp(debtInCollateralToken, liquidationRewardPercent, PERCENT)
+                Math.mulDivUp(debtInCollateralToken, vars.liquidationRewardPercent, PERCENT)
             );
             liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -135,8 +134,9 @@ library Liquidate {
 
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
 
-            protocolProfitCollateralToken =
-                Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
+            protocolProfitCollateralToken = Math.mulDivDown(
+                collateralRemainder, vars.collateralProtocolPercent, PERCENT
+            );
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;
