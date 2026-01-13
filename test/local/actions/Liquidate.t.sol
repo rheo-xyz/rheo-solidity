@@ -236,7 +236,9 @@ contract LiquidateTest is BaseTest {
             _after.liquidator.collateralTokenBalance,
             _before.liquidator.collateralTokenBalance + liquidatorProfitCollateralToken
         );
-        assertEq(_after.feeRecipient.collateralTokenBalance, _before.feeRecipient.collateralTokenBalance + protocolSplit);
+        assertEq(
+            _after.feeRecipient.collateralTokenBalance, _before.feeRecipient.collateralTokenBalance + protocolSplit
+        );
         assertEq(_after.bob.debtBalance, 0);
     }
 
@@ -483,5 +485,4 @@ contract LiquidateTest is BaseTest {
             _liquidate(liquidator, debtPositionId);
         }
     }
-
 }

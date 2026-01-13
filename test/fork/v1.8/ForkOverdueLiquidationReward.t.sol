@@ -2,18 +2,19 @@
 pragma solidity 0.8.23;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {ProposeSafeTxUpgradeToV1_8_3Script} from "@script/ProposeSafeTxUpgradeToV1_8_3.s.sol";
 import {DataView} from "@src/market/SizeViewData.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
+import {Math} from "@src/market/libraries/Math.sol";
 import {InitializeFeeConfigParams} from "@src/market/libraries/actions/Initialize.sol";
 import {LiquidateParams} from "@src/market/libraries/actions/Liquidate.sol";
 import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
-import {Math} from "@src/market/libraries/Math.sol";
 import {ForkTest} from "@test/fork/ForkTest.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {console} from "forge-std/console.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract ForkOverdueLiquidationRewardTest is ForkTest {
     address private constant TX_SENDER = 0xDe5C38699a7057a33524F96e62Bb1987C2568816;
@@ -129,8 +130,7 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         uint256 liquidatorPre = collateralTokenLocal.balanceOf(TX_SENDER);
         uint256 protocolPre = collateralTokenLocal.balanceOf(ISizeView(address(size)).feeConfig().feeRecipient);
         uint256 futureValue = size.getDebtPosition(DEBT_POSITION_ID).futureValue;
-        uint256 futureValueCollateral =
-            ISizeView(address(size)).debtTokenAmountToCollateralTokenAmount(futureValue);
+        uint256 futureValueCollateral = ISizeView(address(size)).debtTokenAmountToCollateralTokenAmount(futureValue);
         int256 futureValueUsd = _usdDelta(int256(futureValueCollateral), priceFeed.getPrice());
 
         (
@@ -231,9 +231,7 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         );
         console.log("set_overdueCollateralProtocolPercent", overdueProtocolPercent);
         vm.prank(owner);
-        size.updateConfig(
-            UpdateConfigParams({key: "overdueCollateralProtocolPercent", value: overdueProtocolPercent})
-        );
+        size.updateConfig(UpdateConfigParams({key: "overdueCollateralProtocolPercent", value: overdueProtocolPercent}));
     }
 
     function _logOutcome(string memory label, Outcome memory outcome) internal pure {
@@ -316,12 +314,10 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         return string.concat(_formatSigned18(percent, 2), "%");
     }
 
-    function _logCaseRow(
-        uint256 caseIndex,
-        uint256 liquidatorPercent,
-        uint256 protocolPercent,
-        Outcome memory upgraded
-    ) internal view {
+    function _logCaseRow(uint256 caseIndex, uint256 liquidatorPercent, uint256 protocolPercent, Outcome memory upgraded)
+        internal
+        view
+    {
         RowVars memory vars;
         vars.borrowerUsd = _usdDelta(upgraded.borrowerDelta, currentPrice);
         vars.liquidatorUsd = _usdDelta(upgraded.liquidatorDelta, currentPrice);
@@ -333,9 +329,7 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         vars.row = string.concat(vars.row, _formatPercent(protocolPercent), " | ");
         vars.row = string.concat(vars.row, _formatUsd2(vars.borrowerUsd), " | ");
         vars.row = string.concat(
-            vars.row,
-            _formatPercent2(_borrowerVsFutureValuePercent(vars.borrowerUsd, upgraded.futureValueUsd)),
-            " | "
+            vars.row, _formatPercent2(_borrowerVsFutureValuePercent(vars.borrowerUsd, upgraded.futureValueUsd)), " | "
         );
         vars.row = string.concat(vars.row, _formatUsd2(vars.liquidatorUsd), " | ");
         vars.row = string.concat(vars.row, _formatUsd2(vars.protocolUsd), " | ");

@@ -150,23 +150,6 @@ contract Size is
         _grantRole(BORROW_RATE_UPDATER_ROLE, owner);
     }
 
-    /// @inheritdoc ISizeV1_8
-    function reinitialize(uint256 overdueLiquidationRewardPercent, uint256 overdueCollateralProtocolPercent)
-        external
-        onlyRoleOrSizeFactoryHasRole(DEFAULT_ADMIN_ROLE)
-        reinitializer(1_08_03)
-    {
-        UpdateConfigParams memory overdueLiquidationParams =
-            UpdateConfigParams({key: "overdueLiquidationRewardPercent", value: overdueLiquidationRewardPercent});
-        state.validateUpdateConfig(overdueLiquidationParams);
-        state.executeUpdateConfig(overdueLiquidationParams);
-
-        UpdateConfigParams memory overdueCollateralParams =
-            UpdateConfigParams({key: "overdueCollateralProtocolPercent", value: overdueCollateralProtocolPercent});
-        state.validateUpdateConfig(overdueCollateralParams);
-        state.executeUpdateConfig(overdueCollateralParams);
-    }
-
     function _hasRole(bytes32 role, address account) internal view returns (bool) {
         if (hasRole(role, account)) {
             return true;

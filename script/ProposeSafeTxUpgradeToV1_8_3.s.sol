@@ -5,12 +5,16 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {BaseScript} from "@script/BaseScript.sol";
 import {ICollectionsManager} from "@src/collections/interfaces/ICollectionsManager.sol";
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
+import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
 
 import {Contract, Networks} from "@script/Networks.sol";
 
 import {Size} from "@src/market/Size.sol";
+
+import {IMulticall} from "@src/market/interfaces/IMulticall.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
-import {ISizeV1_8} from "@src/market/interfaces/v1.8/ISizeV1_8.sol";
+import {ISizeAdmin} from "@src/market/interfaces/ISizeAdmin.sol";
+
 import {console} from "forge-std/console.sol";
 
 import {Safe} from "@safe-utils/Safe.sol";
@@ -60,21 +64,32 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
         datas = new bytes[](unpausedMarkets.length + 1);
         for (uint256 i = 0; i < unpausedMarkets.length; i++) {
             targets[i] = address(unpausedMarkets[i]);
+            bytes[] memory multicallDatas = new bytes[](2);
+            multicallDatas[0] = abi.encodeCall(
+                ISizeAdmin.updateConfig,
+                (
+                    UpdateConfigParams({
+                        key: "overdueCollateralProtocolPercent",
+                        value: OVERDUE_COLLATERAL_PROTOCOL_PERCENT
+                    })
+                )
+            );
+            multicallDatas[1] = abi.encodeCall(
+                ISizeAdmin.updateConfig,
+                (
+                    UpdateConfigParams({
+                        key: "overdueLiquidationRewardPercent",
+                        value: OVERDUE_LIQUIDATION_REWARD_PERCENT
+                    })
+                )
+            );
             datas[i] = abi.encodeCall(
                 UUPSUpgradeable.upgradeToAndCall,
-                (
-                    address(newSizeImplementation),
-                    abi.encodeCall(
-                        ISizeV1_8.reinitialize,
-                        (OVERDUE_LIQUIDATION_REWARD_PERCENT, OVERDUE_COLLATERAL_PROTOCOL_PERCENT)
-                    )
-                )
+                (address(newSizeImplementation), abi.encodeCall(IMulticall.multicall, (multicallDatas)))
             );
         }
         targets[unpausedMarkets.length] = address(sizeFactory);
-        datas[unpausedMarkets.length] = abi.encodeCall(
-            SizeFactory.setSizeImplementation,
-            (address(newSizeImplementation))
-        );
+        datas[unpausedMarkets.length] =
+            abi.encodeCall(SizeFactory.setSizeImplementation, (address(newSizeImplementation)));
     }
 }

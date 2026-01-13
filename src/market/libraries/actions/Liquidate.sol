@@ -104,7 +104,7 @@ library Liquidate {
 
         // if the loan is both underwater and overdue, the protocol fee related to underwater liquidations takes precedence
         LiquidateVars memory vars;
-        if(state.isUserUnderwater(debtPosition.borrower)) {
+        if (state.isUserUnderwater(debtPosition.borrower)) {
             vars.collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
             vars.liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
         } else {
@@ -134,7 +134,8 @@ library Liquidate {
 
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
 
-            protocolProfitCollateralToken = Math.mulDivDown(collateralRemainder, vars.collateralProtocolPercent, PERCENT);
+            protocolProfitCollateralToken =
+                Math.mulDivDown(collateralRemainder, vars.collateralProtocolPercent, PERCENT);
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;

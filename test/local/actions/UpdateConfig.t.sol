@@ -56,5 +56,4 @@ contract UpdateConfigTest is BaseTest {
         size.updateConfig(UpdateConfigParams({key: "priceFeed", value: uint256(uint160(address(newPriceFeed)))}));
         assertTrue(size.oracle().priceFeed == address(newPriceFeed));
     }
-
 }
