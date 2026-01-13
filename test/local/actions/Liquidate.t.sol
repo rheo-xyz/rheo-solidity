@@ -245,6 +245,8 @@ contract LiquidateTest is BaseTest {
     function test_Liquidate_liquidate_overdue_very_high_CR() public {
         _updateConfig("minTenor", 1);
         _updateConfig("swapFeeAPR", 0);
+        _updateConfig("overdueLiquidationRewardPercent", 0.05e18);
+        _updateConfig("overdueCollateralProtocolPercent", 0.005e18);
         _setPrice(1e18);
         _deposit(alice, usdc, 100e6);
         _deposit(bob, weth, 1000e18);
