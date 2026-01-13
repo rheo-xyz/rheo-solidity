@@ -134,9 +134,8 @@ library Liquidate {
 
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
 
-            protocolProfitCollateralToken = Math.mulDivDown(
-                collateralRemainder, vars.collateralProtocolPercent, PERCENT
-            );
+            protocolProfitCollateralToken =
+                Math.mulDivDown(collateralRemainder, vars.collateralProtocolPercent, PERCENT);
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;
