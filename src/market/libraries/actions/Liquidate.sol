@@ -103,13 +103,14 @@ library Liquidate {
         );
 
         // if the loan is both underwater and overdue, the protocol fee related to underwater liquidations takes precedence
-        LiquidateVars memory vars;
+        uint256 collateralProtocolPercent;
+        uint256 liquidationRewardPercent;
         if (state.isUserUnderwater(debtPosition.borrower)) {
-            vars.collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
-            vars.liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
+            collateralProtocolPercent = state.feeConfig.collateralProtocolPercent;
+            liquidationRewardPercent = state.feeConfig.liquidationRewardPercent;
         } else {
-            vars.collateralProtocolPercent = state.feeConfig.overdueCollateralProtocolPercent;
-            vars.liquidationRewardPercent = state.data.overdueLiquidationRewardPercent;
+            collateralProtocolPercent = state.feeConfig.overdueCollateralProtocolPercent;
+            liquidationRewardPercent = state.data.overdueLiquidationRewardPercent;
         }
 
         uint256 assignedCollateral = state.getDebtPositionAssignedCollateral(debtPosition);
@@ -120,7 +121,7 @@ library Liquidate {
         if (assignedCollateral > debtInCollateralToken) {
             uint256 liquidatorReward = Math.min(
                 assignedCollateral - debtInCollateralToken,
-                Math.mulDivUp(debtInCollateralToken, vars.liquidationRewardPercent, PERCENT)
+                Math.mulDivUp(debtInCollateralToken, liquidationRewardPercent, PERCENT)
             );
             liquidatorProfitCollateralToken = debtInCollateralToken + liquidatorReward;
 
@@ -135,7 +136,7 @@ library Liquidate {
             collateralRemainder = Math.min(collateralRemainder, collateralRemainderCap);
 
             protocolProfitCollateralToken =
-                Math.mulDivDown(collateralRemainder, vars.collateralProtocolPercent, PERCENT);
+                Math.mulDivDown(collateralRemainder, collateralProtocolPercent, PERCENT);
         } else {
             // unprofitable liquidation
             liquidatorProfitCollateralToken = assignedCollateral;
