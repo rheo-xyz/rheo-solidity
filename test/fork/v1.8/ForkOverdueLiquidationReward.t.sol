@@ -9,17 +9,17 @@ import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
 import {InitializeFeeConfigParams} from "@src/market/libraries/actions/Initialize.sol";
 import {LiquidateParams} from "@src/market/libraries/actions/Liquidate.sol";
 import {UpdateConfigParams} from "@src/market/libraries/actions/UpdateConfig.sol";
+import {Math} from "@src/market/libraries/Math.sol";
 import {ForkTest} from "@test/fork/ForkTest.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
+import {console} from "forge-std/console.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract ForkOverdueLiquidationRewardTest is ForkTest {
     address private constant TX_SENDER = 0xDe5C38699a7057a33524F96e62Bb1987C2568816;
     uint256 private constant TX_BLOCK = 40_450_767;
     uint256 private constant TX_TIMESTAMP = 1_767_690_881;
     uint256 private constant DEBT_POSITION_ID = 1108;
-    address private constant TX_TO = 0x12127D545B90fa47C19C47E5A223B42F88C0Eece;
-    bytes private constant TX_DATA =
-        hex"322deff80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000c2a429681cad7c1ce36442fbf7a4a68b11eff9400000000000000000000000000000000000000000000000000000000000000454000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000695cd4d80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000de5c38699a7057a33524f96e62bb1987c25688160000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000dc000000000000000000000000000000000000000000000000000000000000000200000000000000000000000004200000000000000000000000000000000000006000000000000000000000000888888888889758f76e7103c6cbf23abbf58f94600000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000d04a373cf1a000000000000000000000000d4f480965d2347d421f1bec7f545682e5ec2151d00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000cc0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000004200000000000000000000000000000000000006000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000000000000000000000000000000000001dd5aa9b000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000010000000000000000000000006131b5fae19ea4f9d964eac0408e4408b66337b5000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ae4e21fd0e9000000000000000000000000000000000000000000000000000000000000002000000000000000000000000063242a4ea82847b20e506b63b0e2e2eff0cc6cb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000005e0000000000000000000000000000000000000000000000000000000000000082000000000000000000000000000000000000000000000000000000000000005200000000000000000022c71014bef3d400000000000000000022c71014bef3d40000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000041d7ffb7284ac55239f2a1adc3195251c9c768e2c6342ec8aa277be37ba0defc0f01362c2737dbf59b4c5dfe12bc176a22e35395abd57a60f895bc455c223e59e71c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000420000000000000000000000000888888888889758f76e7103c6cbf23abbf58f946000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a0000000000000000002109e8e082347000000000000000000024843748fbb33800000000000000000022c71014bef3d400000000000000000000000001e22d08800000000000000000000000000000000000000000001f90000000f42400000000000000000000000000000004f82e73edb06d29ff62c91ec8f5ff06571bdeb290000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007fffffff0000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000261f598cd00000000000000002b8574f0f6ded2a4846d27350a909c355497d929081c27ac00000000000000002b8574f0f6ded2a4846d27350a909c355497d9290000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000042000000000000000000000000000000000000068000000000000000000000247789ba1a0000000000000000022c71014bef3d40000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000022c71014bef3d40b8d469f800000000000100014f4e4c1c6fa7ce6188807225e5ff4a83b8c50509000000000000000000000000000000000000000000000000000000000000008000000000000000000000000063242a4ea82847b20e506b63b0e2e2eff0cc6cb00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000b0ebf70b3407c0e8c8fd74290e51de7ec77328dd000000000000000000000000ba1333333333a1ba1108e8412f11850a5c319ba9000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda0291380000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004200000000000000000000000000000000000006000000000000000000000000833589fcd6edb6e08f4c7c32d4f71b54bda02913000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001a000000000000000000000000000000000000000000000000000000000000001e00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000888888888889758f76e7103c6cbf23abbf58f946000000000000000000000000000000000000000000000000022c71014bef3d40000000000000000000000000000000000000000000000000000000001dd5aa9b00000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000000100000000000000000000000063242a4ea82847b20e506b63b0e2e2eff0cc6cb00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000022c71014bef3d4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002797b22536f75726365223a2250656e646c65222c22416d6f756e74496e555344223a223530342e343932383632353137393031222c22416d6f756e744f7574555344223a223530342e38323334393639323237393135222c22526566657272616c223a22222c22466c616773223a302c22416d6f756e744f7574223a22353035353938303838222c2254696d657374616d70223a313736373639303838302c22526f7574654944223a2233623536306234332d353139392d343333362d383936662d6631646637363262666466653a34383232626432632d303431302d346138612d393432312d623134363534333864616561222c22496e74656772697479496e666f223a7b224b65794944223a2231222c225369676e6174757265223a224543724f616d6b6b784b4a622f57516161486646686b514f7777726d78637131733141304a574f58756c4d734f616b4b313068445443396f516b4839703653752b58507a51416232786a53416f6276344a37504d375766384b585453567166786b7157356773524a6b6f494b675776567555326c534150757430785166614f67325a726f56485933574265775574623256365a39326a4f53686f3769626478316a5477462b34353967636d3676496c766c6e49317070427043594e3769694a504c50654e6c7672396e566332735950385a6237627465387035585476354574524d4a4f6e6e7a534633617667713461333459445a7142344b5874456645764b502f5138485430766b725749747533305341734e3045776e6a5462304c447046674457783764506e724a34484d73734b36386b7930385636396e713171615468566b627564486b692f3773616a6a6d3039546558536a673d3d227d7d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000022c71014bef3d4000000000000000000000000000000000000000000000000000000000";
 
     struct Outcome {
         address borrower;
@@ -27,12 +27,184 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         int256 borrowerDelta;
         int256 liquidatorDelta;
         int256 protocolDelta;
+        int256 futureValueUsd;
+        uint256 gasUsed;
+    }
+
+    struct Vars {
+        Outcome current;
+        uint256 price;
+        int256 currentBorrowerUsd;
+        int256 currentLiquidatorUsd;
+        int256 currentProtocolUsd;
+    }
+
+    struct RowVars {
+        int256 borrowerUsd;
+        int256 liquidatorUsd;
+        int256 protocolUsd;
+        uint256 breakEvenGwei;
+        string row;
     }
 
     IERC20 private collateralTokenLocal;
     IERC20 private borrowTokenVaultLocal;
+    uint256 private currentPrice;
+    int256 private currentBorrowerUsd;
+    int256 private currentLiquidatorUsd;
+    int256 private currentProtocolUsd;
 
     function setUp() public override(ForkTest) {
+        _resetFork();
+    }
+
+    function testFork_overdueLiquidationRewardPercentImpact() public {
+        Vars memory vars;
+        vars.current = _replayAndMeasure(false, 0, 0);
+        _logOutcome("current", vars.current);
+
+        console.log(
+            "| Case | overdueLiquidationRewardPercent (%) | overdueCollateralProtocolPercent (%) | Borrower USD | Borrower vs FV (%) | Liquidator USD | Protocol USD | % change vs current (borrower/liquidator/protocol) | Gas used | Breakeven gas price (gwei) |"
+        );
+        console.log("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |");
+
+        vars.price = priceFeed.getPrice();
+        currentPrice = vars.price;
+        currentBorrowerUsd = _usdDelta(vars.current.borrowerDelta, vars.price);
+        currentLiquidatorUsd = _usdDelta(vars.current.liquidatorDelta, vars.price);
+        currentProtocolUsd = _usdDelta(vars.current.protocolDelta, vars.price);
+
+        console.log(
+            string.concat(
+                "| Current (no upgrade) | n/a | n/a | ",
+                _formatUsd2(currentBorrowerUsd),
+                " | ",
+                _formatPercent2(_borrowerVsFutureValuePercent(currentBorrowerUsd, vars.current.futureValueUsd)),
+                " | ",
+                _formatUsd2(currentLiquidatorUsd),
+                " | ",
+                _formatUsd2(currentProtocolUsd),
+                " | n/a | ",
+                Strings.toString(vars.current.gasUsed),
+                " | ",
+                _formatGwei(_breakevenGasPriceGwei(vars.current.liquidatorDelta, vars.current.gasUsed)),
+                " |"
+            )
+        );
+
+        uint256 step = 0.005e18; // 0.5%
+        uint256 caseIndex = 0;
+        for (uint256 i = 0; i <= 2; i++) {
+            uint256 liquidatorPercent = step * i;
+            for (uint256 j = 0; j <= 2; j++) {
+                uint256 protocolPercent = step * j;
+                console.log("case_index", caseIndex);
+                Outcome memory upgraded = _replayAndMeasure(true, liquidatorPercent, protocolPercent);
+                _logOutcome("upgraded", upgraded);
+
+                assertEq(vars.current.borrower, upgraded.borrower, "borrower");
+                assertEq(vars.current.liquidator, upgraded.liquidator, "liquidator");
+
+                _logCaseRow(caseIndex, liquidatorPercent, protocolPercent, upgraded);
+
+                caseIndex++;
+            }
+        }
+    }
+
+    function _replayAndMeasure(bool doUpgrade, uint256 overdueLiquidationRewardPercent, uint256 overdueProtocolPercent)
+        internal
+        returns (Outcome memory outcome)
+    {
+        _resetFork();
+        console.log("replay.doUpgrade", doUpgrade);
+        console.log("replay.overdueLiquidationRewardPercent", overdueLiquidationRewardPercent);
+        console.log("replay.overdueProtocolPercent", overdueProtocolPercent);
+        if (doUpgrade) {
+            _upgradeToV1_8_3();
+            _updateOverdueConfig(overdueLiquidationRewardPercent, overdueProtocolPercent);
+        }
+
+        uint256 borrowerPre = collateralTokenLocal.balanceOf(size.getDebtPosition(DEBT_POSITION_ID).borrower);
+        uint256 liquidatorPre = collateralTokenLocal.balanceOf(TX_SENDER);
+        uint256 protocolPre = collateralTokenLocal.balanceOf(ISizeView(address(size)).feeConfig().feeRecipient);
+        uint256 futureValue = size.getDebtPosition(DEBT_POSITION_ID).futureValue;
+        uint256 futureValueCollateral =
+            ISizeView(address(size)).debtTokenAmountToCollateralTokenAmount(futureValue);
+        int256 futureValueUsd = _usdDelta(int256(futureValueCollateral), priceFeed.getPrice());
+
+        (
+            address borrower,
+            address liquidator,
+            ,
+            uint256 borrowerPost,
+            uint256 liquidatorPost,
+            uint256 protocolPost,
+            uint256 gasUsed
+        ) = _executeAndCapture();
+
+        outcome.borrower = borrower;
+        outcome.liquidator = liquidator;
+        outcome.borrowerDelta = int256(borrowerPost) - int256(borrowerPre);
+        outcome.liquidatorDelta = int256(liquidatorPost) - int256(liquidatorPre);
+        outcome.protocolDelta = int256(protocolPost) - int256(protocolPre);
+        outcome.futureValueUsd = futureValueUsd;
+        outcome.gasUsed = gasUsed;
+    }
+
+    function _executeAndCapture()
+        internal
+        returns (
+            address borrower,
+            address liquidator,
+            address feeRecipient,
+            uint256 borrowerPost,
+            uint256 liquidatorPost,
+            uint256 protocolPost,
+            uint256 gasUsed
+        )
+    {
+        vm.warp(TX_TIMESTAMP);
+        liquidator = TX_SENDER;
+        borrower = size.getDebtPosition(DEBT_POSITION_ID).borrower;
+        feeRecipient = ISizeView(address(size)).feeConfig().feeRecipient;
+
+        // Use direct liquidation to keep the fork deltas deterministic.
+        gasUsed = _liquidateDirect(liquidator);
+
+        borrowerPost = collateralTokenLocal.balanceOf(borrower);
+        liquidatorPost = collateralTokenLocal.balanceOf(liquidator);
+        protocolPost = collateralTokenLocal.balanceOf(feeRecipient);
+    }
+
+    function _liquidateDirect(address liquidator) internal returns (uint256 gasUsed) {
+        uint256 futureValue = size.getDebtPosition(DEBT_POSITION_ID).futureValue;
+        uint256 balance = borrowTokenVaultLocal.balanceOf(liquidator);
+        if (balance < futureValue) {
+            console.log("top_up_borrowTokenVault", balance, futureValue);
+            // Ensure the liquidator can repay for the fork test scenario.
+            deal(address(borrowTokenVaultLocal), liquidator, futureValue);
+        }
+        vm.startPrank(liquidator);
+        uint256 gasStart = gasleft();
+        size.liquidate(
+            LiquidateParams({debtPositionId: DEBT_POSITION_ID, minimumCollateralProfit: 0, deadline: type(uint256).max})
+        );
+        gasUsed = gasStart - gasleft();
+        vm.stopPrank();
+    }
+
+    function _upgradeToV1_8_3() internal {
+        ProposeSafeTxUpgradeToV1_8_3Script script = new ProposeSafeTxUpgradeToV1_8_3Script();
+        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_8_3Data();
+        for (uint256 i = 0; i < targets.length; i++) {
+            vm.prank(owner);
+            (bool ok,) = targets[i].call(datas[i]);
+            assertTrue(ok);
+        }
+    }
+
+    function _resetFork() internal {
         vm.createSelectFork("base_archive", TX_BLOCK);
         vm.chainId(8453);
         ISize isize;
@@ -51,93 +223,154 @@ contract ForkOverdueLiquidationRewardTest is ForkTest {
         }
     }
 
-    function testFork_overdueLiquidationRewardPercentImpact() public {
-        Outcome memory current = _replayAndMeasure(false);
-        Outcome memory upgraded = _replayAndMeasure(true);
-
-        assertEq(current.borrower, upgraded.borrower, "borrower");
-        assertEq(current.liquidator, upgraded.liquidator, "liquidator");
-        assertLe(upgraded.liquidatorDelta, current.liquidatorDelta, "liquidatorDelta");
-        assertGe(upgraded.borrowerDelta, current.borrowerDelta, "borrowerDelta");
-        // assertGe(upgraded.protocolDelta, current.protocolDelta, "protocolDelta");
-    }
-
-    function _replayAndMeasure(bool doUpgrade) internal returns (Outcome memory outcome) {
-        uint256 snapshot = vm.snapshot();
-        if (doUpgrade) {
-            _upgradeToV1_8_3();
-        }
-
-        (
-            address borrower,
-            address liquidator,
-            address feeRecipient,
-            uint256 borrowerPost,
-            uint256 liquidatorPost,
-            uint256 protocolPost
-        ) = _executeAndCapture();
-
-        vm.revertTo(snapshot);
-        if (doUpgrade) {
-            _upgradeToV1_8_3();
-        }
-
-        uint256 borrowerPre = collateralTokenLocal.balanceOf(borrower);
-        uint256 liquidatorPre = collateralTokenLocal.balanceOf(liquidator);
-        uint256 protocolPre = collateralTokenLocal.balanceOf(feeRecipient);
-
-        outcome.borrower = borrower;
-        outcome.liquidator = liquidator;
-        outcome.borrowerDelta = int256(borrowerPost) - int256(borrowerPre);
-        outcome.liquidatorDelta = int256(liquidatorPost) - int256(liquidatorPre);
-        outcome.protocolDelta = int256(protocolPost) - int256(protocolPre);
-    }
-
-    function _executeAndCapture()
-        internal
-        returns (
-            address borrower,
-            address liquidator,
-            address feeRecipient,
-            uint256 borrowerPost,
-            uint256 liquidatorPost,
-            uint256 protocolPost
-        )
-    {
-        vm.warp(TX_TIMESTAMP);
-        liquidator = TX_SENDER;
-        borrower = size.getDebtPosition(DEBT_POSITION_ID).borrower;
-        feeRecipient = ISizeView(address(size)).feeConfig().feeRecipient;
-
-        vm.prank(liquidator);
-        (bool success,) = TX_TO.call(TX_DATA);
-        if (!success) {
-            // The swap route reverts on fork; fall back to direct liquidation for delta checks.
-            _liquidateDirect(liquidator);
-        }
-
-        borrowerPost = collateralTokenLocal.balanceOf(borrower);
-        liquidatorPost = collateralTokenLocal.balanceOf(liquidator);
-        protocolPost = collateralTokenLocal.balanceOf(feeRecipient);
-    }
-
-    function _liquidateDirect(address liquidator) internal {
-        uint256 futureValue = size.getDebtPosition(DEBT_POSITION_ID).futureValue;
-        assertGe(borrowTokenVaultLocal.balanceOf(liquidator), futureValue);
-        vm.startPrank(liquidator);
-        size.liquidate(
-            LiquidateParams({debtPositionId: DEBT_POSITION_ID, minimumCollateralProfit: 0, deadline: type(uint256).max})
+    function _updateOverdueConfig(uint256 overdueLiquidationRewardPercent, uint256 overdueProtocolPercent) internal {
+        console.log("set_overdueLiquidationRewardPercent", overdueLiquidationRewardPercent);
+        vm.prank(owner);
+        size.updateConfig(
+            UpdateConfigParams({key: "overdueLiquidationRewardPercent", value: overdueLiquidationRewardPercent})
         );
-        vm.stopPrank();
+        console.log("set_overdueCollateralProtocolPercent", overdueProtocolPercent);
+        vm.prank(owner);
+        size.updateConfig(
+            UpdateConfigParams({key: "overdueCollateralProtocolPercent", value: overdueProtocolPercent})
+        );
     }
 
-    function _upgradeToV1_8_3() internal {
-        ProposeSafeTxUpgradeToV1_8_3Script script = new ProposeSafeTxUpgradeToV1_8_3Script();
-        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_8_3Data();
-        for (uint256 i = 0; i < targets.length; i++) {
-            vm.prank(owner);
-            (bool ok,) = targets[i].call(datas[i]);
-            assertTrue(ok);
+    function _logOutcome(string memory label, Outcome memory outcome) internal pure {
+        console.log(string.concat(label, ".borrower"), outcome.borrower);
+        console.log(string.concat(label, ".liquidator"), outcome.liquidator);
+        console.log(string.concat(label, ".borrowerDelta"), outcome.borrowerDelta);
+        console.log(string.concat(label, ".liquidatorDelta"), outcome.liquidatorDelta);
+        console.log(string.concat(label, ".protocolDelta"), outcome.protocolDelta);
+    }
+
+    function _formatPercent(uint256 value) internal pure returns (string memory) {
+        return _formatSigned18(int256(value) * 100, 2);
+    }
+
+    function _formatSigned18(int256 value, uint256 decimals) internal pure returns (string memory) {
+        bool negative = value < 0;
+        uint256 absValue = uint256(negative ? -value : value);
+        uint256 scale = 10 ** decimals;
+        uint256 integerPart = absValue / 1e18;
+        uint256 fractionalPart = (absValue / (1e18 / scale)) % scale;
+
+        string memory integerStr = Strings.toString(integerPart);
+        string memory fractionalStr = Strings.toString(fractionalPart);
+        while (bytes(fractionalStr).length < decimals) {
+            fractionalStr = string.concat("0", fractionalStr);
         }
+
+        string memory sign = negative ? "-" : "";
+        return string.concat(sign, integerStr, ".", fractionalStr);
+    }
+
+    function _usdDelta(int256 tokenDelta, uint256 price) internal pure returns (int256) {
+        bool negative = tokenDelta < 0;
+        uint256 absToken = uint256(negative ? -tokenDelta : tokenDelta);
+        uint256 absUsd = Math.mulDivDown(absToken, price, 1e18);
+        return negative ? -int256(absUsd) : int256(absUsd);
+    }
+
+    function _formatUsd2(int256 usdValue) internal pure returns (string memory) {
+        bool negative = usdValue < 0;
+        uint256 absValue = uint256(negative ? -usdValue : usdValue);
+        string memory absString = _formatSigned18(int256(absValue), 2);
+        if (negative) {
+            return string.concat("-$", absString);
+        }
+        return string.concat("$", absString);
+    }
+
+    function _formatPercentChange(int256 newUsd, int256 currentUsd) internal pure returns (string memory) {
+        if (currentUsd == 0) {
+            return "n/a";
+        }
+        int256 delta = newUsd - currentUsd;
+        bool negative = (delta < 0) != (currentUsd < 0);
+        uint256 absDelta = uint256(delta < 0 ? -delta : delta);
+        uint256 absCurrent = uint256(currentUsd < 0 ? -currentUsd : currentUsd);
+        uint256 absPercent = Math.mulDivDown(absDelta, 100e18, absCurrent);
+        int256 percent = negative ? -int256(absPercent) : int256(absPercent);
+        return string.concat(_formatSigned18(percent, 2), "%");
+    }
+
+    function _borrowerVsFutureValuePercent(int256 borrowerUsd, int256 futureValueUsd) internal pure returns (int256) {
+        if (futureValueUsd == 0) {
+            return 0;
+        }
+        // Compare borrower loss against FV: (loss - FV) / FV.
+        uint256 lossUsd = borrowerUsd < 0 ? uint256(-borrowerUsd) : uint256(borrowerUsd);
+        uint256 fvUsd = futureValueUsd < 0 ? uint256(-futureValueUsd) : uint256(futureValueUsd);
+        if (fvUsd == 0) {
+            return 0;
+        }
+        int256 delta = int256(lossUsd) - int256(fvUsd);
+        bool negative = delta < 0;
+        uint256 absDelta = uint256(negative ? -delta : delta);
+        uint256 absPercent = Math.mulDivDown(absDelta, 100e18, fvUsd);
+        return negative ? -int256(absPercent) : int256(absPercent);
+    }
+
+    function _formatPercent2(int256 percent) internal pure returns (string memory) {
+        return string.concat(_formatSigned18(percent, 2), "%");
+    }
+
+    function _logCaseRow(
+        uint256 caseIndex,
+        uint256 liquidatorPercent,
+        uint256 protocolPercent,
+        Outcome memory upgraded
+    ) internal view {
+        RowVars memory vars;
+        vars.borrowerUsd = _usdDelta(upgraded.borrowerDelta, currentPrice);
+        vars.liquidatorUsd = _usdDelta(upgraded.liquidatorDelta, currentPrice);
+        vars.protocolUsd = _usdDelta(upgraded.protocolDelta, currentPrice);
+        vars.breakEvenGwei = _breakevenGasPriceGwei(upgraded.liquidatorDelta, upgraded.gasUsed);
+
+        vars.row = string.concat("| ", Strings.toString(caseIndex), " | ");
+        vars.row = string.concat(vars.row, _formatPercent(liquidatorPercent), " | ");
+        vars.row = string.concat(vars.row, _formatPercent(protocolPercent), " | ");
+        vars.row = string.concat(vars.row, _formatUsd2(vars.borrowerUsd), " | ");
+        vars.row = string.concat(
+            vars.row,
+            _formatPercent2(_borrowerVsFutureValuePercent(vars.borrowerUsd, upgraded.futureValueUsd)),
+            " | "
+        );
+        vars.row = string.concat(vars.row, _formatUsd2(vars.liquidatorUsd), " | ");
+        vars.row = string.concat(vars.row, _formatUsd2(vars.protocolUsd), " | ");
+        vars.row = string.concat(
+            vars.row,
+            _formatPercentChange(vars.borrowerUsd, currentBorrowerUsd),
+            " / ",
+            _formatPercentChange(vars.liquidatorUsd, currentLiquidatorUsd),
+            " / "
+        );
+        vars.row = string.concat(
+            vars.row,
+            _formatPercentChange(vars.protocolUsd, currentProtocolUsd),
+            " | ",
+            Strings.toString(upgraded.gasUsed),
+            " | "
+        );
+        vars.row = string.concat(vars.row, _formatGwei(vars.breakEvenGwei), " |");
+
+        console.log(vars.row);
+    }
+
+    function _breakevenGasPriceGwei(int256 liquidatorDelta, uint256 gasUsed) internal pure returns (uint256) {
+        if (gasUsed == 0) {
+            return 0;
+        }
+        if (liquidatorDelta <= 0) {
+            return 0;
+        }
+        // liquidatorDelta is in collateral token wei, assume collateral is WETH for gas cost.
+        uint256 priceWeiPerGas = uint256(liquidatorDelta) / gasUsed;
+        return priceWeiPerGas / 1e9;
+    }
+
+    function _formatGwei(uint256 value) internal pure returns (string memory) {
+        return string.concat(Strings.toString(value), " gwei");
     }
 }
