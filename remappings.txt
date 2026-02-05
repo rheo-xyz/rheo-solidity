@@ -24,3 +24,4 @@ solmate/tokens/=lib/solmate/src/tokens/
 solmate/utils/=lib/solmate/src/utils/
 solmate/auth/=lib/solmate/src/auth/
 halmos-helpers-lib/=lib/halmos-helpers-lib/src/
+@rheo-fm=lib/rheo-fm

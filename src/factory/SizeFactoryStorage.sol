@@ -32,6 +32,8 @@ abstract contract SizeFactoryStorage {
     mapping(address onBehalfOf => uint256 nonce) public authorizationNonces;
     // collections manager (added in v1.8)
     ICollectionsManager public collectionsManager;
+    // the rheo fm implementation (used as implementation for proxy contracts, added in v1.9)
+    address public rheoFMImplementation;
 }
 // slither-disable-end constable-states
 // slither-disable-end uninitialized-state

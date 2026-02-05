@@ -21,4 +21,6 @@ abstract contract SizeFactoryEvents {
         address indexed sender, address indexed operator, uint256 indexed actionsBitmap, uint256 nonce
     ); // v1.7
     event RevokeAllAuthorizations(address indexed sender); // v1.7
+
+    event RheoFMImplementationSet(address indexed oldRheoFMImplementation, address indexed newRheoFMImplementation); // v1.9
 }

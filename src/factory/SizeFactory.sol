@@ -25,6 +25,13 @@ import {
     InitializeRiskConfigParams
 } from "@src/market/libraries/actions/Initialize.sol";
 
+import {
+    InitializeDataParams as InitializeDataParamsRheoFM,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheoFM,
+    InitializeOracleParams as InitializeOracleParamsRheoFM,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheoFM
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
+
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -32,10 +39,13 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {Errors} from "@src/market/libraries/Errors.sol";
 
+import {ISize as IRheoFM} from "@rheo-fm/src/market/interfaces/ISize.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
+import {ISizeFactoryV1_9} from "@src/factory/interfaces/ISizeFactoryV1_9.sol";
 import {MarketFactoryLibrary} from "@src/factory/libraries/MarketFactoryLibrary.sol";
+import {RheoFMMarketFactoryLibrary} from "@src/factory/libraries/RheoFMMarketFactoryLibrary.sol";
 
 import {NonTransferrableRebasingTokenVaultLibrary} from
     "@src/factory/libraries/NonTransferrableRebasingTokenVaultLibrary.sol";
@@ -102,6 +112,15 @@ contract SizeFactory is
         sizeImplementation = _sizeImplementation;
     }
 
+    /// @inheritdoc ISizeFactoryV1_9
+    function setRheoFMImplementation(address _rheoFMImplementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_rheoFMImplementation == address(0)) {
+            revert Errors.NULL_ADDRESS();
+        }
+        emit RheoFMImplementationSet(rheoFMImplementation, _rheoFMImplementation);
+        rheoFMImplementation = _rheoFMImplementation;
+    }
+
     /// @inheritdoc ISizeFactory
     function setNonTransferrableRebasingTokenVaultImplementation(address _nonTransferrableTokenVaultImplementation)
         external
@@ -131,6 +150,27 @@ contract SizeFactory is
         address admin = msg.sender;
         market = MarketFactoryLibrary.createMarket(
             sizeImplementation, admin, feeConfigParams, riskConfigParams, oracleParams, dataParams
+        );
+        // slither-disable-next-line unused-return
+        markets.add(address(market));
+        emit CreateMarket(address(market));
+    }
+
+    /// @inheritdoc ISizeFactoryV1_9
+    function createMarketRheoFM(
+        InitializeFeeConfigParamsRheoFM calldata feeConfigParamsRheoFM,
+        InitializeRiskConfigParamsRheoFM calldata riskConfigParamsRheoFM,
+        InitializeOracleParamsRheoFM calldata oracleParamsRheoFM,
+        InitializeDataParamsRheoFM calldata dataParamsRheoFM
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (IRheoFM market) {
+        address admin = msg.sender;
+        market = RheoFMMarketFactoryLibrary.createMarketRheoFM(
+            rheoFMImplementation,
+            admin,
+            feeConfigParamsRheoFM,
+            riskConfigParamsRheoFM,
+            oracleParamsRheoFM,
+            dataParamsRheoFM
         );
         // slither-disable-next-line unused-return
         markets.add(address(market));
