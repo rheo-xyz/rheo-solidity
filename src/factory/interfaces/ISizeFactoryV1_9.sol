@@ -2,13 +2,13 @@
 pragma solidity 0.8.23;
 
 import {
-    InitializeDataParams as InitializeDataParamsRheoFM,
-    InitializeFeeConfigParams as InitializeFeeConfigParamsRheoFM,
-    InitializeOracleParams as InitializeOracleParamsRheoFM,
-    InitializeRiskConfigParams as InitializeRiskConfigParamsRheoFM
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
 } from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
-import {ISize as IRheoFM} from "@rheo-fm/src/market/interfaces/ISize.sol";
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
 /// @title ISizeFactoryV1_9
 /// @custom:security-contact security@size.credit
@@ -17,14 +17,14 @@ import {ISize as IRheoFM} from "@rheo-fm/src/market/interfaces/ISize.sol";
 interface ISizeFactoryV1_9 {
     /// @notice Creates a new Rheo FM market
     /// @dev The contract owner is set as the owner of the market
-    function createMarketRheoFM(
-        InitializeFeeConfigParamsRheoFM calldata feeConfigParamsRheoFM,
-        InitializeRiskConfigParamsRheoFM calldata riskConfigParamsRheoFM,
-        InitializeOracleParamsRheoFM calldata oracleParamsRheoFM,
-        InitializeDataParamsRheoFM calldata dataParamsRheoFM
-    ) external returns (IRheoFM);
+    function createMarketRheo(
+        InitializeFeeConfigParamsRheo calldata feeConfigParamsRheo,
+        InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
+        InitializeOracleParamsRheo calldata oracleParamsRheo,
+        InitializeDataParamsRheo calldata dataParamsRheo
+    ) external returns (IRheo);
 
-    /// @notice Set the rheo fm implementation
-    /// @param _rheoFMImplementation The new rheo fm implementation
-    function setRheoFMImplementation(address _rheoFMImplementation) external;
+    /// @notice Set the Rheo implementation
+    /// @param _rheoImplementation The new Rheo implementation
+    function setRheoImplementation(address _rheoImplementation) external;
 }

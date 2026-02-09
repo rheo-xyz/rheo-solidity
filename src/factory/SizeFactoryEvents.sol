@@ -22,5 +22,5 @@ abstract contract SizeFactoryEvents {
     ); // v1.7
     event RevokeAllAuthorizations(address indexed sender); // v1.7
 
-    event RheoFMImplementationSet(address indexed oldRheoFMImplementation, address indexed newRheoFMImplementation); // v1.9
+    event RheoImplementationSet(address indexed oldRheoImplementation, address indexed newRheoImplementation); // v1.9
 }
