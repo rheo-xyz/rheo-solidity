@@ -27,10 +27,13 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
     mapping(ISize market => EnumerableSet.UintSet) private creditPositionIdsByMarket;
     mapping(ISize market => uint256) private sumFutureValueByMarket;
 
+    address[2] private extraUsersWithCollateral =
+        [0x83eCCb05386B2d10D05e1BaEa8aC89b5B7EA8290, 0x12328eA44AB6D7B18aa9Cc030714763734b625dB];
+
     function run() public pure {}
 
     function getMarketShutdownCalldata(ISize market) public returns (bytes memory calldata_) {
-        MarketShutdownParams memory shutdownParams = _collectPositions(market);
+        MarketShutdownParams memory shutdownParams = collectPositions(market);
         calldata_ = abi.encodeCall(ISizeAdmin.marketShutdown, (shutdownParams));
     }
 
@@ -54,7 +57,7 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
         return sumFutureValueByMarket[market];
     }
 
-    function _collectPositions(ISize market) private returns (MarketShutdownParams memory params) {
+    function collectPositions(ISize market) public returns (MarketShutdownParams memory params) {
         ISizeView marketView = ISizeView(address(market));
         DataView memory dataView = marketView.data();
 
@@ -100,6 +103,9 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
 
         borrowers.add(marketView.feeConfig().feeRecipient);
         borrowers.add(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
+        for (uint256 i = 0; i < extraUsersWithCollateral.length; i++) {
+            borrowers.add(extraUsersWithCollateral[i]);
+        }
 
         params = MarketShutdownParams({
             debtPositionIdsToForceLiquidate: debtPositionIds.values(),
