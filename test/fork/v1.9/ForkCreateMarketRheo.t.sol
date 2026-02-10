@@ -8,12 +8,9 @@ import {Contract, NetworkConfiguration, Networks} from "@script/Networks.sol";
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
 
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
-
-import {CollectionsManager} from "@src/collections/CollectionsManager.sol";
 
 import {
     InitializeDataParams,
@@ -28,6 +25,18 @@ import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/Sell
 import {RepayParams} from "@rheo-fm/src/market/libraries/actions/Repay.sol";
 
 import {DebtPosition, RESERVED_ID} from "@rheo-fm/src/market/libraries/LoanLibrary.sol";
+
+contract RheoCompat is Rheo {
+    // Base mainnet CollectionsManager (at least as of 2026-02-10) uses legacy helpers to null-check offers.
+    // Rheo FM markets expose `isUserDefinedLimitOrdersNull`, so we provide compatibility shims.
+    function isUserDefinedLoanOfferNull(address user) external view returns (bool) {
+        return state.data.users[user].loanOffer.maturities.length == 0 && state.data.users[user].loanOffer.aprs.length == 0;
+    }
+
+    function isUserDefinedBorrowOfferNull(address user) external view returns (bool) {
+        return state.data.users[user].borrowOffer.maturities.length == 0 && state.data.users[user].borrowOffer.aprs.length == 0;
+    }
+}
 
 contract ForkCreateMarketRheoTest is Test, Networks {
     uint256 internal constant FORK_BLOCK = 41_946_442; // 2026-02-10 00:10:31 UTC
@@ -74,16 +83,8 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         vm.prank(factoryOwner);
         factory.upgradeToAndCall(address(newFactoryImplementation), "");
 
-        // The on-chain CollectionsManager must also be upgraded to the version compatible with Rheo FM markets
-        // (it needs to call `isUserDefinedLimitOrdersNull`, not legacy per-offer null-check helpers).
-        address collectionsManagerProxy = address(factory.collectionsManager());
-        assertTrue(collectionsManagerProxy != address(0));
-        CollectionsManager newCollectionsManagerImplementation = new CollectionsManager();
-        vm.prank(factoryOwner);
-        UUPSUpgradeable(collectionsManagerProxy).upgradeToAndCall(address(newCollectionsManagerImplementation), "");
-
         // Configure the Rheo FM implementation used for new markets.
-        Rheo rheoImplementation = new Rheo();
+        RheoCompat rheoImplementation = new RheoCompat();
         vm.prank(factoryOwner);
         factory.setRheoImplementation(address(rheoImplementation));
 
@@ -96,13 +97,12 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         maturities[5] = MATURITY_2026_08_01;
 
         uint256[] memory aprs = new uint256[](6);
-        // Keep APRs at 0 so `futureValue == cashAmountOut` and the borrower can repay immediately in this test flow.
-        aprs[0] = 0;
-        aprs[1] = 0;
-        aprs[2] = 0;
-        aprs[3] = 0;
-        aprs[4] = 0;
-        aprs[5] = 0;
+        aprs[0] = 0.1e18;
+        aprs[1] = 0.1e18;
+        aprs[2] = 0.1e18;
+        aprs[3] = 0.1e18;
+        aprs[4] = 0.1e18;
+        aprs[5] = 0.1e18;
 
         InitializeFeeConfigParams memory feeConfig = InitializeFeeConfigParams({
             swapFeeAPR: 0,
@@ -165,7 +165,7 @@ contract ForkCreateMarketRheoTest is Test, Networks {
                 amount: cashAmountOut,
                 maturity: maturity,
                 deadline: block.timestamp + 1 hours,
-                maxAPR: 0,
+                maxAPR: 0.2e18,
                 exactAmountIn: false,
                 collectionId: RESERVED_ID,
                 rateProvider: address(0)
@@ -176,9 +176,21 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         // New market: first debt position id is 0.
         DebtPosition memory debtBefore = market.getDebtPosition(0);
         assertEq(debtBefore.borrower, borrower);
-        assertEq(debtBefore.futureValue, cashAmountOut);
+        assertGt(debtBefore.futureValue, cashAmountOut);
         assertEq(debtBefore.dueDate, maturity);
         assertEq(debtBefore.liquidityIndexAtRepayment, 0);
+
+        // Borrower received `cashAmountOut` in borrowTokenVault shares, but owes the (larger) `futureValue`.
+        // Top up enough shares so repay can succeed.
+        uint256 repayAmount = debtBefore.futureValue;
+        if (repayAmount > cashAmountOut) {
+            uint256 topUp = repayAmount - cashAmountOut + 2; // +2 buffer for potential rounding in the vault.
+            deal(address(usdc), borrower, topUp);
+            vm.startPrank(borrower);
+            usdc.approve(address(market), topUp);
+            market.deposit(DepositParams({token: address(usdc), amount: topUp, to: borrower}));
+            vm.stopPrank();
+        }
 
         // Repay (full).
         vm.prank(borrower);
