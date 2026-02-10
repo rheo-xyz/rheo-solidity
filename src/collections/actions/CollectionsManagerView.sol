@@ -85,11 +85,12 @@ abstract contract CollectionsManagerView is ICollectionsManagerView, Collections
                             APR VIEW
     //////////////////////////////////////////////////////////////*/
 
+    // slither-disable-start calls-loop
     function _isUserDefinedLimitOrderNull(address user, ISize market, bool isLoanOffer) private view returns (bool) {
-        // slither-disable-next-line calls-loop
         (bool isLoanOfferNull, bool isBorrowOfferNull) = market.isUserDefinedLimitOrdersNull(user);
         return isLoanOffer ? isLoanOfferNull : isBorrowOfferNull;
     }
+    // slither-disable-end calls-loop
 
     /// @inheritdoc ICollectionsManagerView
     function getLoanOfferAPR(address user, uint256 collectionId, ISize market, address rateProvider, uint256 tenor)
