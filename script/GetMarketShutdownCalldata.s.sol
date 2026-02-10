@@ -27,12 +27,17 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
     mapping(ISize market => EnumerableSet.UintSet) private creditPositionIdsByMarket;
     mapping(ISize market => uint256) private sumFutureValueByMarket;
 
-    address[5] private extraUsersWithCollateral = [
+    address[10] private extraUsersWithCollateral = [
         0x83eCCb05386B2d10D05e1BaEa8aC89b5B7EA8290,
         0x12328eA44AB6D7B18aa9Cc030714763734b625dB,
         0x52f5E8A5E68fafcAc57b56bf62b886424d008dfd,
         0x2c2666015F604835b0f629F9884D764BaDE89C30,
-        0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+        0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045,
+        0x5D58EDC7a7C91239Ec2FD56a646679780886323c,
+        0x8FF4E2A794b612360dc8e4A4f153A1A4672231e6,
+        0xAa44D09F81C5D256603E142267E39867B2B12cc2,
+        0x178d527703888230b78e733cb777A50F53D5fCca,
+        0x3003650b7E4Ae5d43d48fa33F43dF43781Ab1FbF
     ];
 
     function run() public pure {}
