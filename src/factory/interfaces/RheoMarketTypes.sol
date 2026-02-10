@@ -34,4 +34,3 @@ struct InitializeDataParamsRheo {
     address borrowTokenVault;
     address sizeFactory;
 }
-

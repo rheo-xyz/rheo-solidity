@@ -13,16 +13,17 @@ import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
 import {
-    InitializeDataParams,
-    InitializeFeeConfigParams,
-    InitializeOracleParams,
-    InitializeRiskConfigParams
-} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
+    InitializeDataParamsRheo,
+    InitializeFeeConfigParamsRheo,
+    InitializeOracleParamsRheo,
+    InitializeRiskConfigParamsRheo
+} from "@src/factory/interfaces/RheoMarketTypes.sol";
 
-import {DepositParams} from "@rheo-fm/src/market/libraries/actions/Deposit.sol";
 import {BuyCreditLimitParams} from "@rheo-fm/src/market/libraries/actions/BuyCreditLimit.sol";
-import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/SellCreditMarket.sol";
+import {DepositParams} from "@rheo-fm/src/market/libraries/actions/Deposit.sol";
+
 import {RepayParams} from "@rheo-fm/src/market/libraries/actions/Repay.sol";
+import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/SellCreditMarket.sol";
 
 import {DebtPosition, RESERVED_ID} from "@rheo-fm/src/market/libraries/LoanLibrary.sol";
 
@@ -30,11 +31,13 @@ contract RheoCompat is Rheo {
     // Base mainnet CollectionsManager (at least as of 2026-02-10) uses legacy helpers to null-check offers.
     // Rheo FM markets expose `isUserDefinedLimitOrdersNull`, so we provide compatibility shims.
     function isUserDefinedLoanOfferNull(address user) external view returns (bool) {
-        return state.data.users[user].loanOffer.maturities.length == 0 && state.data.users[user].loanOffer.aprs.length == 0;
+        return
+            state.data.users[user].loanOffer.maturities.length == 0 && state.data.users[user].loanOffer.aprs.length == 0;
     }
 
     function isUserDefinedBorrowOfferNull(address user) external view returns (bool) {
-        return state.data.users[user].borrowOffer.maturities.length == 0 && state.data.users[user].borrowOffer.aprs.length == 0;
+        return state.data.users[user].borrowOffer.maturities.length == 0
+            && state.data.users[user].borrowOffer.aprs.length == 0;
     }
 }
 
@@ -104,7 +107,7 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         aprs[4] = 0.1e18;
         aprs[5] = 0.1e18;
 
-        InitializeFeeConfigParams memory feeConfig = InitializeFeeConfigParams({
+        InitializeFeeConfigParamsRheo memory feeConfig = InitializeFeeConfigParamsRheo({
             swapFeeAPR: 0,
             fragmentationFee: 0,
             liquidationRewardPercent: 0.05e18,
@@ -113,7 +116,7 @@ contract ForkCreateMarketRheoTest is Test, Networks {
             feeRecipient: factoryOwner
         });
 
-        InitializeRiskConfigParams memory riskConfig = InitializeRiskConfigParams({
+        InitializeRiskConfigParamsRheo memory riskConfig = InitializeRiskConfigParamsRheo({
             crOpening: 1.5e18,
             crLiquidation: 1.3e18,
             minimumCreditBorrowToken: 10e6,
@@ -122,10 +125,10 @@ contract ForkCreateMarketRheoTest is Test, Networks {
             maturities: maturities
         });
 
-        InitializeOracleParams memory oracleParams = InitializeOracleParams({priceFeed: PRICE_FEED_WETH_USDC});
+        InitializeOracleParamsRheo memory oracleParams = InitializeOracleParamsRheo({priceFeed: PRICE_FEED_WETH_USDC});
 
         NetworkConfiguration memory cfg = params("base-production-weth-usdc");
-        InitializeDataParams memory dataParams = InitializeDataParams({
+        InitializeDataParamsRheo memory dataParams = InitializeDataParamsRheo({
             weth: cfg.weth,
             underlyingCollateralToken: cfg.underlyingCollateralToken,
             underlyingBorrowToken: cfg.underlyingBorrowToken,

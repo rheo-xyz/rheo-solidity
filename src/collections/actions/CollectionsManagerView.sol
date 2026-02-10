@@ -124,7 +124,9 @@ abstract contract CollectionsManagerView is ICollectionsManagerView, Collections
         }
         // else if the user is not copying the collection market rate provider, revert
         else if (!isCopyingCollectionMarketRateProvider(user, collectionId, market, rateProvider)) {
-            revert ICollectionsManagerView.InvalidCollectionMarketRateProvider(collectionId, address(market), rateProvider);
+            revert ICollectionsManagerView.InvalidCollectionMarketRateProvider(
+                collectionId, address(market), rateProvider
+            );
         }
         // else, return the yield curve for that collection, market and rate provider
         else {
