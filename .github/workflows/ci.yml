@@ -124,6 +124,7 @@ jobs:
         with:
           fail-on: low
           solc-version: 0.8.23
+          slither-version: 0.11.5
           slither-args: --legacy-ast
 
 
