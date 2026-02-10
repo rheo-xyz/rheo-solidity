@@ -3,13 +3,13 @@ pragma solidity 0.8.23;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import {BaseScript} from "@rheo-fm/script/BaseScript.sol";
+import {Contract, Networks} from "@rheo-fm/script/Networks.sol";
 import {Safe} from "@safe-utils/Safe.sol";
-import {BaseScript} from "@script/BaseScript.sol";
-import {Contract, Networks} from "@script/Networks.sol";
 
-import {CollectionsManager} from "@src/collections/CollectionsManager.sol";
-import {ICollectionsManager} from "@src/collections/interfaces/ICollectionsManager.sol";
-import {SizeFactory} from "@src/factory/SizeFactory.sol";
+import {CollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
+import {ICollectionsManager} from "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
+import {RheoFactory} from "@rheo-fm/src/factory/RheoFactory.sol";
 
 import {console} from "forge-std/console.sol";
 
@@ -23,7 +23,7 @@ contract ProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Script is BaseScrip
     string derivationPath;
 
     modifier parseEnv() {
-        safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
+        safe.initialize(contracts[block.chainid][Contract.RHEO_GOVERNANCE]);
         signer = vm.envAddress("SIGNER");
         derivationPath = vm.envString("LEDGER_PATH");
         _;
@@ -50,7 +50,7 @@ contract ProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Script is BaseScrip
         public
         returns (address[] memory targets, bytes[] memory datas)
     {
-        SizeFactory sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
+        RheoFactory sizeFactory = RheoFactory(contracts[block.chainid][Contract.RHEO_FACTORY]);
         ICollectionsManager collectionsManager = sizeFactory.collectionsManager();
 
         CollectionsManager newCollectionsManagerImplementation = new CollectionsManager();

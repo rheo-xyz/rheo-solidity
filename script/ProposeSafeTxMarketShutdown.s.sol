@@ -4,22 +4,22 @@ pragma solidity 0.8.23;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+import {BaseScript} from "@rheo-fm/script/BaseScript.sol";
+import {GetMarketShutdownCalldataScript} from "@rheo-fm/script/GetMarketShutdownCalldata.s.sol";
+import {Contract, Networks} from "@rheo-fm/script/Networks.sol";
 import {Safe} from "@safe-utils/Safe.sol";
-import {BaseScript} from "@script/BaseScript.sol";
-import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata.s.sol";
-import {Contract, Networks} from "@script/Networks.sol";
 
-import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
+import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 
-import {DataView} from "@src/market/SizeViewData.sol";
-import {IMulticall} from "@src/market/interfaces/IMulticall.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
-import {ISizeAdmin} from "@src/market/interfaces/ISizeAdmin.sol";
+import {DataView} from "@rheo-fm/src/market/RheoViewData.sol";
+import {IMulticall} from "@rheo-fm/src/market/interfaces/IMulticall.sol";
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
+import {IRheoAdmin} from "@rheo-fm/src/market/interfaces/IRheoAdmin.sol";
 
-import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
-import {DepositParams} from "@src/market/libraries/actions/Deposit.sol";
-import {MarketShutdownParams} from "@src/market/libraries/actions/MarketShutdown.sol";
-import {WithdrawParams} from "@src/market/libraries/actions/Withdraw.sol";
+import {IRheoView} from "@rheo-fm/src/market/interfaces/IRheoView.sol";
+import {DepositParams} from "@rheo-fm/src/market/libraries/actions/Deposit.sol";
+import {MarketShutdownParams} from "@rheo-fm/src/market/libraries/actions/MarketShutdown.sol";
+import {WithdrawParams} from "@rheo-fm/src/market/libraries/actions/Withdraw.sol";
 
 contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
     using Safe for *;
@@ -31,7 +31,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
     string[] public collateralMarketsToShutdownBase = ["VIRTUAL", "cbETH"];
 
     modifier parseEnv() {
-        safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
+        safe.initialize(contracts[block.chainid][Contract.RHEO_GOVERNANCE]);
         signer = vm.envAddress("SIGNER");
         derivationPath = vm.envString("LEDGER_PATH");
         _;
@@ -44,12 +44,12 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
     }
 
     function getMarketShutdownData() public returns (address[] memory targets, bytes[] memory datas) {
-        ISizeFactory sizeFactory = ISizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory marketsToShutdown = _getMarketsToShutdown(sizeFactory);
-        ISize remainingMarket = _getRemainingMarket(sizeFactory, marketsToShutdown);
+        IRheoFactory sizeFactory = IRheoFactory(contracts[block.chainid][Contract.RHEO_FACTORY]);
+        IRheo[] memory marketsToShutdown = _getMarketsToShutdown(sizeFactory);
+        IRheo remainingMarket = _getRemainingMarket(sizeFactory, marketsToShutdown);
 
         IERC20Metadata underlyingBorrowToken = remainingMarket.data().underlyingBorrowToken;
-        uint256 depositAmount = underlyingBorrowToken.balanceOf(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
+        uint256 depositAmount = underlyingBorrowToken.balanceOf(contracts[block.chainid][Contract.RHEO_GOVERNANCE]);
 
         uint256 totalCalls = marketsToShutdown.length + 2 + (depositAmount > 0 ? 3 : 0);
         targets = new address[](totalCalls);
@@ -65,12 +65,12 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
             targets[index] = address(remainingMarket);
             datas[index] = abi.encodeCall(
-                ISize.deposit,
+                IRheo.deposit,
                 (
                     DepositParams({
                         token: address(underlyingBorrowToken),
                         amount: depositAmount,
-                        to: contracts[block.chainid][Contract.SIZE_GOVERNANCE]
+                        to: contracts[block.chainid][Contract.RHEO_GOVERNANCE]
                     })
                 )
             );
@@ -81,12 +81,12 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
         targets[index] = address(remainingMarket);
         datas[index] = abi.encodeCall(
-            ISize.withdraw,
+            IRheo.withdraw,
             (
                 WithdrawParams({
                     token: address(underlyingBorrowToken),
                     amount: type(uint256).max,
-                    to: address(contracts[block.chainid][Contract.SIZE_GOVERNANCE])
+                    to: address(contracts[block.chainid][Contract.RHEO_GOVERNANCE])
                 })
             )
         );
@@ -94,7 +94,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
         bytes[] memory removeMarketData = new bytes[](marketsToShutdown.length);
         for (uint256 i = 0; i < marketsToShutdown.length; i++) {
-            removeMarketData[i] = abi.encodeCall(ISizeFactory.removeMarket, (address(marketsToShutdown[i])));
+            removeMarketData[i] = abi.encodeCall(IRheoFactory.removeMarket, (address(marketsToShutdown[i])));
         }
         targets[index] = address(sizeFactory);
         datas[index] = abi.encodeCall(IMulticall.multicall, (removeMarketData));
@@ -111,13 +111,13 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
     function _appendMarketShutdownCalls(
         GetMarketShutdownCalldataScript script,
-        ISize[] memory marketsToShutdown,
+        IRheo[] memory marketsToShutdown,
         address[] memory targets,
         bytes[] memory datas,
         uint256 index
     ) internal returns (uint256) {
         for (uint256 i = 0; i < marketsToShutdown.length; i++) {
-            ISize market = marketsToShutdown[i];
+            IRheo market = marketsToShutdown[i];
             targets[index] = address(market);
             datas[index] = _buildMarketShutdownAndOrPauseCall(script, market);
             index++;
@@ -125,45 +125,45 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         return index;
     }
 
-    function _getMarketsToShutdown(ISizeFactory sizeFactory) internal view returns (ISize[] memory marketsToShutdown) {
+    function _getMarketsToShutdown(IRheoFactory sizeFactory) internal view returns (IRheo[] memory marketsToShutdown) {
         string[] memory collateralMarketsToShutdown = block.chainid == 1
             ? collateralMarketsToShutdownMainnet
             : block.chainid == 8453 ? collateralMarketsToShutdownBase : new string[](0);
 
-        marketsToShutdown = new ISize[](collateralMarketsToShutdown.length);
+        marketsToShutdown = new IRheo[](collateralMarketsToShutdown.length);
         for (uint256 i = 0; i < collateralMarketsToShutdown.length; i++) {
             marketsToShutdown[i] = _getMarket(sizeFactory, collateralMarketsToShutdown[i], "USDC");
         }
     }
 
-    function _getRemainingMarket(ISizeFactory sizeFactory, ISize[] memory marketsToShutdown)
+    function _getRemainingMarket(IRheoFactory sizeFactory, IRheo[] memory marketsToShutdown)
         internal
         view
-        returns (ISize)
+        returns (IRheo)
     {
         return difference(getUnpausedMarkets(sizeFactory), marketsToShutdown)[0];
     }
 
-    function _buildMarketShutdownAndOrPauseCall(GetMarketShutdownCalldataScript script, ISize market)
+    function _buildMarketShutdownAndOrPauseCall(GetMarketShutdownCalldataScript script, IRheo market)
         internal
         returns (bytes memory)
     {
-        DataView memory dataView = ISizeView(address(market)).data();
+        DataView memory dataView = IRheoView(address(market)).data();
         bool isEmptyMarket = dataView.debtToken.totalSupply() == 0 && dataView.collateralToken.totalSupply() == 0;
 
         if (isEmptyMarket) {
-            return abi.encodeCall(ISizeAdmin.pause, ());
+            return abi.encodeCall(IRheoAdmin.pause, ());
         } else {
             MarketShutdownParams memory params = script.collectPositions(market);
             bytes[] memory multicallDatas = new bytes[](2);
-            multicallDatas[0] = abi.encodeCall(ISizeAdmin.marketShutdown, (params));
-            multicallDatas[1] = abi.encodeCall(ISizeAdmin.pause, ());
+            multicallDatas[0] = abi.encodeCall(IRheoAdmin.marketShutdown, (params));
+            multicallDatas[1] = abi.encodeCall(IRheoAdmin.pause, ());
             return abi.encodeCall(IMulticall.multicall, (multicallDatas));
         }
     }
 
-    function difference(ISize[] memory outer, ISize[] memory inner) public pure returns (ISize[] memory result) {
-        result = new ISize[](outer.length);
+    function difference(IRheo[] memory outer, IRheo[] memory inner) public pure returns (IRheo[] memory result) {
+        result = new IRheo[](outer.length);
         uint256 resultLength = 0;
         for (uint256 i = 0; i < outer.length; i++) {
             bool found = false;
