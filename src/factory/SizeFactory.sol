@@ -26,11 +26,11 @@ import {
 } from "@src/market/libraries/actions/Initialize.sol";
 
 import {
-    InitializeDataParams as InitializeDataParamsRheo,
-    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
-    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
-} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
+    InitializeDataParamsRheo,
+    InitializeFeeConfigParamsRheo,
+    InitializeOracleParamsRheo,
+    InitializeRiskConfigParamsRheo
+} from "@src/factory/interfaces/RheoMarketTypes.sol";
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -39,7 +39,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {Errors} from "@src/market/libraries/Errors.sol";
 
-import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
@@ -162,14 +161,14 @@ contract SizeFactory is
         InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
         InitializeOracleParamsRheo calldata oracleParamsRheo,
         InitializeDataParamsRheo calldata dataParamsRheo
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (IRheo market) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
         address admin = msg.sender;
         market = RheoMarketFactoryLibrary.createMarketRheo(
             rheoImplementation, admin, feeConfigParamsRheo, riskConfigParamsRheo, oracleParamsRheo, dataParamsRheo
         );
         // slither-disable-next-line unused-return
-        markets.add(address(market));
-        emit CreateMarket(address(market));
+        markets.add(market);
+        emit CreateMarket(market);
     }
 
     /// @inheritdoc ISizeFactory

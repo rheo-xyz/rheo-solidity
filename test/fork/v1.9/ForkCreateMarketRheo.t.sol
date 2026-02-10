@@ -135,9 +135,10 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         });
 
         vm.prank(factoryOwner);
-        IRheo market = factory.createMarketRheo(feeConfig, riskConfig, oracleParams, dataParams);
+        address marketAddr = factory.createMarketRheo(feeConfig, riskConfig, oracleParams, dataParams);
+        IRheo market = IRheo(payable(marketAddr));
 
-        assertTrue(factory.isMarket(address(market)));
+        assertTrue(factory.isMarket(marketAddr));
         assertEq(market.version(), "v1.9");
 
         // Lender: deposit USDC to mint borrowTokenVault shares, then create a fixed-maturity loan offer.

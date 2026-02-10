@@ -2,13 +2,11 @@
 pragma solidity 0.8.23;
 
 import {
-    InitializeDataParams as InitializeDataParamsRheo,
-    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
-    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
-} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
-
-import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
+    InitializeDataParamsRheo,
+    InitializeFeeConfigParamsRheo,
+    InitializeOracleParamsRheo,
+    InitializeRiskConfigParamsRheo
+} from "@src/factory/interfaces/RheoMarketTypes.sol";
 
 /// @title ISizeFactoryV1_9
 /// @custom:security-contact security@size.credit
@@ -22,7 +20,7 @@ interface ISizeFactoryV1_9 {
         InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
         InitializeOracleParamsRheo calldata oracleParamsRheo,
         InitializeDataParamsRheo calldata dataParamsRheo
-    ) external returns (IRheo);
+    ) external returns (address);
 
     /// @notice Set the Rheo implementation
     /// @param _rheoImplementation The new Rheo implementation
