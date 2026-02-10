@@ -27,8 +27,13 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
     mapping(ISize market => EnumerableSet.UintSet) private creditPositionIdsByMarket;
     mapping(ISize market => uint256) private sumFutureValueByMarket;
 
-    address[2] private extraUsersWithCollateral =
-        [0x83eCCb05386B2d10D05e1BaEa8aC89b5B7EA8290, 0x12328eA44AB6D7B18aa9Cc030714763734b625dB];
+    address[5] private extraUsersWithCollateral = [
+        0x83eCCb05386B2d10D05e1BaEa8aC89b5B7EA8290,
+        0x12328eA44AB6D7B18aa9Cc030714763734b625dB,
+        0x52f5E8A5E68fafcAc57b56bf62b886424d008dfd,
+        0x2c2666015F604835b0f629F9884D764BaDE89C30,
+        0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+    ];
 
     function run() public pure {}
 
@@ -93,12 +98,19 @@ contract GetMarketShutdownCalldataScript is BaseScript, Networks {
             creditPositionId++
         ) {
             CreditPosition memory creditPosition = marketView.getCreditPosition(creditPositionId);
+            lenders.add(creditPosition.lender);
+
+            // Some lenders can still hold collateral shares even when their credit positions are null.
+            // Include them in force-withdraw to ensure collateralToken totalSupply reaches 0 on shutdown.
+            if (dataView.collateralToken.balanceOf(creditPosition.lender) > 0) {
+                borrowers.add(creditPosition.lender);
+            }
+
             if (creditPosition.credit == 0 || !debtPositionIds.contains(creditPosition.debtPositionId)) {
                 continue;
             }
 
             creditPositionIds.add(creditPositionId);
-            lenders.add(creditPosition.lender);
         }
 
         borrowers.add(marketView.feeConfig().feeRecipient);

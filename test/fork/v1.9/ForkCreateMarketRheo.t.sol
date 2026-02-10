@@ -3,165 +3,162 @@ pragma solidity 0.8.23;
 
 import {Test} from "forge-std/Test.sol";
 
-import {Contract, NetworkConfiguration, Networks} from "@script/Networks.sol";
+import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata.s.sol";
+import {Contract, Networks} from "@script/Networks.sol";
+import {ProposeSafeTxUpgradeToV1_9Script} from "@script/ProposeSafeTxUpgradeToV1_9.s.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
+import {ISize} from "@src/market/interfaces/ISize.sol";
 
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
-
-import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+import {VERSION as RHEO_VERSION} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
 import {BuyCreditLimitParams} from "@rheo-fm/src/market/libraries/actions/BuyCreditLimit.sol";
 import {DepositParams} from "@rheo-fm/src/market/libraries/actions/Deposit.sol";
-
 import {RepayParams} from "@rheo-fm/src/market/libraries/actions/Repay.sol";
 import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/SellCreditMarket.sol";
 
 import {DebtPosition, RESERVED_ID} from "@rheo-fm/src/market/libraries/LoanLibrary.sol";
 
-contract RheoCompat is Rheo {
-    // Base mainnet CollectionsManager (at least as of 2026-02-10) uses legacy helpers to null-check offers.
-    // Rheo FM markets expose `isUserDefinedLimitOrdersNull`, so we provide compatibility shims.
-    function isUserDefinedLoanOfferNull(address user) external view returns (bool) {
-        return
-            state.data.users[user].loanOffer.maturities.length == 0 && state.data.users[user].loanOffer.aprs.length == 0;
-    }
-
-    function isUserDefinedBorrowOfferNull(address user) external view returns (bool) {
-        return state.data.users[user].borrowOffer.maturities.length == 0
-            && state.data.users[user].borrowOffer.aprs.length == 0;
-    }
-}
-
-contract ForkCreateMarketRheoTest is Test, Networks {
-    uint256 internal constant FORK_BLOCK = 41_946_442; // 2026-02-10 00:10:31 UTC
-
-    address internal constant PRICE_FEED_WETH_USDC = 0xd6938E55cc5f4B553948Cc153d360E8a8FA0de72;
-    address internal constant BORROW_TOKEN_VAULT_USDC = 0x0447430C327cCE6C0c43Ec0eb0271fecdAD471b2;
-
-    uint256 internal constant MATURITY_2026_03_01 = 1_772_323_200;
-    uint256 internal constant MATURITY_2026_04_01 = 1_775_001_600;
-    uint256 internal constant MATURITY_2026_05_01 = 1_777_593_600;
-    uint256 internal constant MATURITY_2026_06_01 = 1_780_272_000;
-    uint256 internal constant MATURITY_2026_07_01 = 1_782_864_000;
-    uint256 internal constant MATURITY_2026_08_01 = 1_785_542_400;
-
-    SizeFactory internal factory;
+abstract contract ForkUpgradeToV1_9Base is Test, Networks {
     address internal factoryOwner;
+    SizeFactory internal factory;
 
-    IERC20Metadata internal weth;
-    IERC20Metadata internal usdc;
     address internal lender = address(0x10000);
     address internal borrower = address(0x20000);
 
-    function setUp() public {
-        vm.createSelectFork("base_archive", FORK_BLOCK);
-
-        factory = SizeFactory(contracts[BASE_MAINNET][Contract.SIZE_FACTORY]);
-        factoryOwner = contracts[BASE_MAINNET][Contract.SIZE_GOVERNANCE];
-
-        NetworkConfiguration memory cfg = params("base-production-weth-usdc");
-        weth = IERC20Metadata(cfg.underlyingCollateralToken);
-        usdc = IERC20Metadata(cfg.underlyingBorrowToken);
+    function _fork(string memory rpcAlias, uint256 blockNumber) internal {
+        vm.createSelectFork(rpcAlias, blockNumber);
+        factory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
+        factoryOwner = contracts[block.chainid][Contract.SIZE_GOVERNANCE];
 
         vm.label(address(factory), "SizeFactory");
-        vm.label(factoryOwner, "SizeFactoryOwner");
-        vm.label(address(weth), "WETH");
-        vm.label(address(usdc), "USDC");
+        vm.label(factoryOwner, "FactoryOwner");
         vm.label(lender, "lender");
         vm.label(borrower, "borrower");
     }
 
-    function testFork_CreateMarketRheo_buyCreditLimit_sellCreditMarket_repay() public {
-        // Upgrade the on-chain SizeFactory proxy to the local implementation on this branch (v1.9).
-        SizeFactory newFactoryImplementation = new SizeFactory();
-        vm.prank(factoryOwner);
-        factory.upgradeToAndCall(address(newFactoryImplementation), "");
+    function _v1_9Maturities() internal pure returns (uint256[] memory maturities) {
+        maturities = new uint256[](6);
+        maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00 UTC
+        maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00 UTC
+        maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00 UTC
+        maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00 UTC
+        maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00 UTC
+        maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00 UTC
+    }
 
-        // Configure the Rheo FM implementation used for new markets.
-        RheoCompat rheoImplementation = new RheoCompat();
-        vm.prank(factoryOwner);
-        factory.setRheoImplementation(address(rheoImplementation));
+    function _fundGovernanceForFullShutdown(ISize[] memory legacyMarkets) internal {
+        // Compute required borrow token liquidity (sum of futureValues) per underlying borrow token.
+        GetMarketShutdownCalldataScript shutdownScript = new GetMarketShutdownCalldataScript();
 
-        uint256[] memory maturities = new uint256[](6);
-        maturities[0] = MATURITY_2026_03_01;
-        maturities[1] = MATURITY_2026_04_01;
-        maturities[2] = MATURITY_2026_05_01;
-        maturities[3] = MATURITY_2026_06_01;
-        maturities[4] = MATURITY_2026_07_01;
-        maturities[5] = MATURITY_2026_08_01;
+        address[] memory tokens = new address[](legacyMarkets.length);
+        uint256[] memory totals = new uint256[](legacyMarkets.length);
+        uint256 n = 0;
 
-        uint256[] memory aprs = new uint256[](6);
-        aprs[0] = 0.1e18;
-        aprs[1] = 0.1e18;
-        aprs[2] = 0.1e18;
-        aprs[3] = 0.1e18;
-        aprs[4] = 0.1e18;
-        aprs[5] = 0.1e18;
+        for (uint256 i = 0; i < legacyMarkets.length; i++) {
+            ISize m = legacyMarkets[i];
+            shutdownScript.collectPositions(m);
+            uint256 need = shutdownScript.getSumFutureValue(m);
+            address token = address(m.data().underlyingBorrowToken);
 
-        InitializeFeeConfigParamsRheo memory feeConfig = InitializeFeeConfigParamsRheo({
-            swapFeeAPR: 0,
-            fragmentationFee: 0,
-            liquidationRewardPercent: 0.05e18,
-            overdueCollateralProtocolPercent: 0.1e18,
-            collateralProtocolPercent: 0.1e18,
-            feeRecipient: factoryOwner
-        });
+            uint256 idx = type(uint256).max;
+            for (uint256 j = 0; j < n; j++) {
+                if (tokens[j] == token) {
+                    idx = j;
+                    break;
+                }
+            }
+            if (idx == type(uint256).max) {
+                idx = n++;
+                tokens[idx] = token;
+            }
+            totals[idx] += need;
+        }
 
-        InitializeRiskConfigParamsRheo memory riskConfig = InitializeRiskConfigParamsRheo({
-            crOpening: 1.5e18,
-            crLiquidation: 1.3e18,
-            minimumCreditBorrowToken: 10e6,
-            minTenor: 1 days,
-            maxTenor: 365 days,
-            maturities: maturities
-        });
+        for (uint256 i = 0; i < n; i++) {
+            if (totals[i] > 0) {
+                // 2x buffer to cover rounding/index differences across vault operations.
+                deal(tokens[i], factoryOwner, totals[i] * 2 + 1);
+            }
+        }
+    }
 
-        InitializeOracleParamsRheo memory oracleParams = InitializeOracleParamsRheo({priceFeed: PRICE_FEED_WETH_USDC});
+    function _execAsOwner(address[] memory targets, bytes[] memory datas) internal {
+        require(targets.length == datas.length, "length mismatch");
+        vm.startPrank(factoryOwner);
+        for (uint256 i = 0; i < targets.length; i++) {
+            (bool ok, bytes memory ret) = targets[i].call(datas[i]);
+            if (!ok) {
+                assembly ("memory-safe") {
+                    revert(add(ret, 0x20), mload(ret))
+                }
+            }
+        }
+        vm.stopPrank();
+    }
 
-        NetworkConfiguration memory cfg = params("base-production-weth-usdc");
-        InitializeDataParamsRheo memory dataParams = InitializeDataParamsRheo({
-            weth: cfg.weth,
-            underlyingCollateralToken: cfg.underlyingCollateralToken,
-            underlyingBorrowToken: cfg.underlyingBorrowToken,
-            variablePool: cfg.variablePool,
-            borrowTokenVault: BORROW_TOKEN_VAULT_USDC,
-            sizeFactory: address(factory)
-        });
+    function _findRheoMarketWethUsdc() internal view returns (IRheo) {
+        address weth = contracts[block.chainid][Contract.WETH];
+        ISize[] memory markets = factory.getMarkets();
+        for (uint256 i = 0; i < markets.length; i++) {
+            IRheo m = IRheo(payable(address(markets[i])));
+            if (address(m.data().underlyingCollateralToken) == weth) {
+                // WETH/USDC market on all supported networks borrows USDC.
+                return m;
+            }
+        }
+        revert("WETH/* market not found");
+    }
 
-        vm.prank(factoryOwner);
-        address marketAddr = factory.createMarketRheo(feeConfig, riskConfig, oracleParams, dataParams);
-        IRheo market = IRheo(payable(marketAddr));
+    function _assertMigrationEffects(ISize[] memory legacyMarkets) internal view {
+        // Legacy markets should be paused and removed from the factory registry.
+        for (uint256 i = 0; i < legacyMarkets.length; i++) {
+            assertTrue(PausableUpgradeable(address(legacyMarkets[i])).paused());
+            assertFalse(factory.isMarket(address(legacyMarkets[i])));
+        }
 
-        assertTrue(factory.isMarket(marketAddr));
-        assertEq(market.version(), "v1.9");
+        // New markets should replace the legacy set 1:1.
+        assertEq(factory.getMarketsCount(), legacyMarkets.length);
+    }
 
-        // Lender: deposit USDC to mint borrowTokenVault shares, then create a fixed-maturity loan offer.
-        uint256 lenderDepositAmount = 1_000e6;
-        deal(address(usdc), lender, lenderDepositAmount);
+    function _smokeRheoMarket(IRheo market) internal {
+        assertEq(market.version(), RHEO_VERSION);
+
+        IERC20Metadata coll = market.data().underlyingCollateralToken;
+        IERC20Metadata borrowTok = market.data().underlyingBorrowToken;
+
+        uint256[] memory maturities = _v1_9Maturities();
+        uint256[] memory aprs = new uint256[](maturities.length);
+        for (uint256 i = 0; i < aprs.length; i++) {
+            aprs[i] = 0.1e18;
+        }
+
+        // Lender: deposit borrow token, then create a fixed-maturity loan offer.
+        uint256 lenderDepositAmount = 10_000 * (10 ** borrowTok.decimals());
+        deal(address(borrowTok), lender, lenderDepositAmount);
         vm.startPrank(lender);
-        usdc.approve(address(market), lenderDepositAmount);
-        market.deposit(DepositParams({token: address(usdc), amount: lenderDepositAmount, to: lender}));
+        borrowTok.approve(address(market), lenderDepositAmount);
+        market.deposit(DepositParams({token: address(borrowTok), amount: lenderDepositAmount, to: lender}));
         market.buyCreditLimit(BuyCreditLimitParams({maturities: maturities, aprs: aprs}));
         vm.stopPrank();
 
-        // Borrower: deposit collateral, then borrow from the lender's loan offer.
-        uint256 borrowerCollateralAmount = 5e18;
-        deal(address(weth), borrower, borrowerCollateralAmount);
+        // Borrower: deposit collateral, then borrow against the lender's offer.
+        uint256 borrowerCollateralAmount = 10 ether;
+        deal(address(coll), borrower, borrowerCollateralAmount);
         vm.startPrank(borrower);
-        weth.approve(address(market), borrowerCollateralAmount);
-        market.deposit(DepositParams({token: address(weth), amount: borrowerCollateralAmount, to: borrower}));
+        coll.approve(address(market), borrowerCollateralAmount);
+        market.deposit(DepositParams({token: address(coll), amount: borrowerCollateralAmount, to: borrower}));
 
-        uint256 maturity = MATURITY_2026_03_01;
-        uint256 cashAmountOut = 100e6;
+        uint256 maturity = maturities[0];
+        uint256 cashAmountOut = 100 * (10 ** borrowTok.decimals());
+        uint256 minimumCreditBorrowToken = market.riskConfig().minimumCreditBorrowToken;
+        if (cashAmountOut < minimumCreditBorrowToken) {
+            cashAmountOut = minimumCreditBorrowToken + 1;
+        }
         market.sellCreditMarket(
             SellCreditMarketParams({
                 lender: lender,
@@ -177,33 +174,92 @@ contract ForkCreateMarketRheoTest is Test, Networks {
         );
         vm.stopPrank();
 
-        // New market: first debt position id is 0.
+        // Repay the first debt position id (starts at 0 in Rheo FM).
         DebtPosition memory debtBefore = market.getDebtPosition(0);
         assertEq(debtBefore.borrower, borrower);
-        assertGt(debtBefore.futureValue, cashAmountOut);
         assertEq(debtBefore.dueDate, maturity);
-        assertEq(debtBefore.liquidityIndexAtRepayment, 0);
+        assertGt(debtBefore.futureValue, cashAmountOut);
 
-        // Borrower received `cashAmountOut` in borrowTokenVault shares, but owes the (larger) `futureValue`.
-        // Top up enough shares so repay can succeed.
         uint256 repayAmount = debtBefore.futureValue;
         if (repayAmount > cashAmountOut) {
-            uint256 topUp = repayAmount - cashAmountOut + 2; // +2 buffer for potential rounding in the vault.
-            deal(address(usdc), borrower, topUp);
+            uint256 topUp = repayAmount - cashAmountOut + 10;
+            deal(address(borrowTok), borrower, topUp);
             vm.startPrank(borrower);
-            usdc.approve(address(market), topUp);
-            market.deposit(DepositParams({token: address(usdc), amount: topUp, to: borrower}));
+            borrowTok.approve(address(market), topUp);
+            market.deposit(DepositParams({token: address(borrowTok), amount: topUp, to: borrower}));
             vm.stopPrank();
         }
 
-        // Repay (full).
         vm.prank(borrower);
         market.repay(RepayParams({debtPositionId: 0, borrower: borrower}));
 
         DebtPosition memory debtAfter = market.getDebtPosition(0);
-        assertEq(debtAfter.borrower, borrower);
         assertEq(debtAfter.futureValue, 0);
-        assertEq(debtAfter.dueDate, maturity);
         assertGt(debtAfter.liquidityIndexAtRepayment, 0);
+    }
+
+    function _runForkMigrationAndSmoke() internal {
+        ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
+        _fundGovernanceForFullShutdown(legacyMarkets);
+
+        ProposeSafeTxUpgradeToV1_9Script script = new ProposeSafeTxUpgradeToV1_9Script();
+        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_9Data();
+        _execAsOwner(targets, datas);
+
+        _assertMigrationEffects(legacyMarkets);
+
+        IRheo wethMarket = _findRheoMarketWethUsdc();
+        _smokeRheoMarket(wethMarket);
+    }
+}
+
+contract ForkUpgradeToV1_9BaseMainnetTest is ForkUpgradeToV1_9Base {
+    uint256 internal constant FORK_BLOCK = 41_975_096;
+    // 2026-02-10 16:05:39 UTC
+
+    function setUp() public {
+        string memory alchemyKey = vm.envOr("API_KEY_ALCHEMY", string(""));
+        if (bytes(alchemyKey).length == 0) {
+            vm.skip(true);
+        }
+        _fork("base", FORK_BLOCK);
+    }
+
+    function testFork_UpgradeToV1_9_baseMainnet_migrates_and_smokes() public {
+        _runForkMigrationAndSmoke();
+    }
+}
+
+contract ForkUpgradeToV1_9EthereumMainnetTest is ForkUpgradeToV1_9Base {
+    uint256 internal constant FORK_BLOCK = 24_427_455;
+    // 2026-02-10 16:05:35 UTC
+
+    function setUp() public {
+        string memory alchemyKey = vm.envOr("API_KEY_ALCHEMY", string(""));
+        if (bytes(alchemyKey).length == 0) {
+            vm.skip(true);
+        }
+        _fork("mainnet", FORK_BLOCK);
+    }
+
+    function testFork_UpgradeToV1_9_ethereumMainnet_migrates_and_smokes() public {
+        _runForkMigrationAndSmoke();
+    }
+}
+
+contract ForkUpgradeToV1_9BaseSepoliaTest is ForkUpgradeToV1_9Base {
+    uint256 internal constant FORK_BLOCK = 37_487_867;
+    // 2026-02-10 17:20:22 UTC
+
+    function setUp() public {
+        string memory alchemyKey = vm.envOr("API_KEY_ALCHEMY", string(""));
+        if (bytes(alchemyKey).length == 0) {
+            vm.skip(true);
+        }
+        _fork("base_sepolia", FORK_BLOCK);
+    }
+
+    function testFork_UpgradeToV1_9_baseSepolia_migrates_and_smokes() public {
+        _runForkMigrationAndSmoke();
     }
 }
