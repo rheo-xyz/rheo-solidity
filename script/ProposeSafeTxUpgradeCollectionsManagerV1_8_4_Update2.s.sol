@@ -46,7 +46,10 @@ contract ProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Script is BaseScrip
         console.log("ProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Script: done");
     }
 
-    function getUpgradeCollectionsManagerV1_8_4_Update2Data() public returns (address[] memory targets, bytes[] memory datas) {
+    function getUpgradeCollectionsManagerV1_8_4_Update2Data()
+        public
+        returns (address[] memory targets, bytes[] memory datas)
+    {
         SizeFactory sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
         ICollectionsManager collectionsManager = sizeFactory.collectionsManager();
 
@@ -63,4 +66,3 @@ contract ProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Script is BaseScrip
         datas[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(newCollectionsManagerImplementation), ""));
     }
 }
-

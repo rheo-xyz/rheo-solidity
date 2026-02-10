@@ -12,15 +12,17 @@ import {ForkTest} from "@test/fork/ForkTest.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
+
+import {DataView} from "@src/market/SizeViewData.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
-import {DataView} from "@src/market/SizeViewData.sol";
 
-import {DepositParams} from "@src/market/libraries/actions/Deposit.sol";
-import {BuyCreditLimitParams} from "@src/market/libraries/actions/BuyCreditLimit.sol";
-import {SellCreditMarketParams} from "@src/market/libraries/actions/SellCreditMarket.sol";
-import {InitializeRiskConfigParams} from "@src/market/libraries/actions/Initialize.sol";
 import {YieldCurve} from "@src/market/libraries/YieldCurveLibrary.sol";
+import {BuyCreditLimitParams} from "@src/market/libraries/actions/BuyCreditLimit.sol";
+import {DepositParams} from "@src/market/libraries/actions/Deposit.sol";
+
+import {InitializeRiskConfigParams} from "@src/market/libraries/actions/Initialize.sol";
+import {SellCreditMarketParams} from "@src/market/libraries/actions/SellCreditMarket.sol";
 
 import {RESERVED_ID} from "@src/market/libraries/LoanLibrary.sol";
 import {Math} from "@src/market/libraries/Math.sol";
@@ -172,13 +174,14 @@ contract ForkProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Test is ForkTes
             Math.mulDivUp(creditAmountIn * 10 ** collateralDecimals, crOpening, price * 10 ** borrowDecimals);
 
         // Headroom to avoid edge-case rounding causing CR checks to fail.
-        collateralDepositAmount = requiredCollateral * 2;
-        if (collateralDepositAmount == 0) {
-            collateralDepositAmount = 1;
-        }
+        collateralDepositAmount = requiredCollateral * 2 + 1;
     }
 
-    function _singlePointCurve(uint256 tenor, uint256 apr) internal pure returns (YieldCurve memory curveRelativeTime) {
+    function _singlePointCurve(uint256 tenor, uint256 apr)
+        internal
+        pure
+        returns (YieldCurve memory curveRelativeTime)
+    {
         uint256[] memory tenors = new uint256[](1);
         tenors[0] = tenor;
 
