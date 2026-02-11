@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {EnumerableMap} from "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
@@ -226,19 +227,18 @@ abstract contract BaseScript is Script {
         return result;
     }
 
+    /// @dev Uses OpenZeppelin `Strings.equal` for symbol matching to keep string-comparison logic DRY.
     function _getMarket(
         ISizeFactory sizeFactory,
         string memory underlyingCollateralTokenSymbol,
         string memory underlyingBorrowTokenSymbol
     ) internal view returns (ISize market) {
         address[] memory markets = sizeFactory.getMarkets();
-        bytes32 collateralHash = keccak256(bytes(underlyingCollateralTokenSymbol));
-        bytes32 borrowHash = keccak256(bytes(underlyingBorrowTokenSymbol));
         for (uint256 i = 0; i < markets.length; i++) {
             ISize candidate = ISize(markets[i]);
             if (
-                keccak256(bytes(candidate.data().underlyingCollateralToken.symbol())) == collateralHash
-                    && keccak256(bytes(candidate.data().underlyingBorrowToken.symbol())) == borrowHash
+                Strings.equal(candidate.data().underlyingCollateralToken.symbol(), underlyingCollateralTokenSymbol)
+                    && Strings.equal(candidate.data().underlyingBorrowToken.symbol(), underlyingBorrowTokenSymbol)
             ) {
                 return candidate;
             }
