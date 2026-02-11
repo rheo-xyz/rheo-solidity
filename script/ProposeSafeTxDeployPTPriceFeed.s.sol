@@ -53,7 +53,7 @@ contract ProposeSafeTxDeployPTPriceFeedScript is BaseScript, Networks {
         vm.createSelectFork("mainnet");
         (IPriceFeed priceFeed,,,,,,,) = priceFeedPendleChainlink29May2025UsdcMainnet();
 
-        ISize market = sizeFactory.getMarket(1);
+        ISize market = ISize(sizeFactory.getMarket(1));
         IPriceFeed oldPriceFeed = IPriceFeed(market.oracle().priceFeed);
         uint256 oldPrice = oldPriceFeed.getPrice();
         console.log("old Price Feed", address(oldPriceFeed));

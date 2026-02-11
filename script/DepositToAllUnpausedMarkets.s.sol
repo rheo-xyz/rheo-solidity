@@ -4,7 +4,6 @@ pragma solidity 0.8.23;
 import {Size} from "@src/market/Size.sol";
 
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {BaseScript} from "@script/BaseScript.sol";
@@ -26,37 +25,26 @@ contract DepositToAllUnpausedMarketsScript is BaseScript, Networks {
 
     function run() external broadcast {
         ISizeFactory sizeFactory = ISizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory markets = sizeFactory.getMarkets();
-        ISize[] memory unpausedMarkets = new ISize[](markets.length);
-        IERC20Metadata underlyingBorrowToken = IERC20Metadata(markets[0].data().underlyingBorrowToken);
+        ISize[] memory unpausedMarkets = getUnpausedMarkets(sizeFactory);
+        IERC20Metadata underlyingBorrowToken = IERC20Metadata(unpausedMarkets[0].data().underlyingBorrowToken);
         uint256 amount = 10 ** underlyingBorrowToken.decimals();
-        uint256 unpausedMarketsLength = 0;
-        for (uint256 i = 0; i < markets.length; i++) {
-            if (!PausableUpgradeable(address(markets[i])).paused()) {
-                unpausedMarkets[unpausedMarketsLength] = markets[i];
-                unpausedMarketsLength++;
-            }
-        }
-        _unsafeSetLength(unpausedMarkets, unpausedMarketsLength);
+        uint256 unpausedMarketsLength = unpausedMarkets.length;
         bytes[] memory datas = new bytes[](1 + unpausedMarketsLength + 1);
         datas[0] = abi.encodeCall(
             ISizeFactoryV1_7.setAuthorization, (address(sizeFactory), Authorization.getActionsBitmap(Action.DEPOSIT))
         );
         for (uint256 i = 0; i < unpausedMarketsLength; i++) {
-            underlyingBorrowToken.forceApprove(address(unpausedMarkets[i]), amount);
+            address market = address(unpausedMarkets[i]);
+            underlyingBorrowToken.forceApprove(market, amount);
             datas[i + 1] = abi.encodeCall(
                 ISizeFactoryV1_8.callMarket,
                 (
-                    unpausedMarkets[i],
+                    market,
                     abi.encodeCall(
                         ISizeV1_7.depositOnBehalfOf,
                         (
                             DepositOnBehalfOfParams({
-                                params: DepositParams({
-                                    token: address(underlyingBorrowToken),
-                                    amount: amount,
-                                    to: address(unpausedMarkets[i])
-                                }),
+                                params: DepositParams({token: address(underlyingBorrowToken), amount: amount, to: market}),
                                 onBehalfOf: msg.sender
                             })
                         )

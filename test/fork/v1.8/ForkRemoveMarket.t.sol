@@ -77,7 +77,7 @@ contract ForkRemoveMarketTest is ForkTest, Networks {
         _upgradeSizeFactory();
 
         // Get a market to remove
-        ISize marketToRemove = factory.getMarket(0);
+        ISize marketToRemove = ISize(factory.getMarket(0));
         address marketAddress = address(marketToRemove);
 
         // Try to remove market from non-admin account - should revert
@@ -178,7 +178,7 @@ contract ForkRemoveMarketTest is ForkTest, Networks {
     function _findMarket(bool paused) internal view returns (ISize) {
         uint256 marketsCount = factory.getMarketsCount();
         for (uint256 i = 0; i < marketsCount; i++) {
-            ISize market = factory.getMarket(i);
+            ISize market = ISize(factory.getMarket(i));
             if (PausableUpgradeable(address(market)).paused() == paused) {
                 return market;
             }

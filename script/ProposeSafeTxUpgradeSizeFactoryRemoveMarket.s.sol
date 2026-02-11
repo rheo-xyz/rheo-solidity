@@ -5,7 +5,6 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {BaseScript} from "@script/BaseScript.sol";
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {Contract, Networks} from "@script/Networks.sol";
 
@@ -50,10 +49,10 @@ contract ProposeSafeTxUpgradeSizeFactoryRemoveMarketScript is BaseScript, Networ
         sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
 
         // Find all paused markets
-        ISize[] memory pausedMarkets = _getPausedMarkets();
+        address[] memory pausedMarkets = _getPausedMarkets();
         console.log("Found paused markets:", pausedMarkets.length);
         for (uint256 i = 0; i < pausedMarkets.length; i++) {
-            console.log("  Paused market:", address(pausedMarkets[i]));
+            console.log("  Paused market:", pausedMarkets[i]);
         }
 
         SizeFactory newSizeFactoryImplementation = new SizeFactory();
@@ -74,23 +73,28 @@ contract ProposeSafeTxUpgradeSizeFactoryRemoveMarketScript is BaseScript, Networ
         // Subsequent calls: remove each paused market
         for (uint256 i = 0; i < pausedMarkets.length; i++) {
             targets[i + 1] = address(sizeFactory);
-            datas[i + 1] = abi.encodeCall(SizeFactory.removeMarket, (address(pausedMarkets[i])));
+            datas[i + 1] = abi.encodeCall(SizeFactory.removeMarket, (pausedMarkets[i]));
         }
     }
 
-    function _getPausedMarkets() internal view returns (ISize[] memory pausedMarkets) {
-        ISize[] memory allMarkets = sizeFactory.getMarkets();
-        pausedMarkets = new ISize[](allMarkets.length);
+    function _getPausedMarkets() internal view returns (address[] memory pausedMarkets) {
+        address[] memory allMarkets = sizeFactory.getMarkets();
+        pausedMarkets = new address[](allMarkets.length);
         uint256 pausedCount = 0;
 
         for (uint256 i = 0; i < allMarkets.length; i++) {
-            if (PausableUpgradeable(address(allMarkets[i])).paused()) {
+            if (PausableUpgradeable(allMarkets[i]).paused()) {
                 pausedMarkets[pausedCount] = allMarkets[i];
                 pausedCount++;
             }
         }
 
-        // Resize the array to actual count (using inherited function from Networks)
-        _unsafeSetLength(pausedMarkets, pausedCount);
+        _unsafeSetLengthAddress(pausedMarkets, pausedCount);
+    }
+
+    function _unsafeSetLengthAddress(address[] memory markets, uint256 length) private pure {
+        assembly ("memory-safe") {
+            mstore(markets, length)
+        }
     }
 }

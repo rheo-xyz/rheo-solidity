@@ -58,12 +58,16 @@ contract ProposeSafeTxUpdatePriceFeedChainlinkOnly4xV2Script is BaseScript, Netw
             priceFeedsUSDeToUsdcMainnet();
         address susde = address(susdeUniswapBaseParams.baseToken);
 
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         uint256 count;
 
         for (uint256 i = 0; i < markets.length; i++) {
-            address underlyingCollateralToken = address(markets[i].data().underlyingCollateralToken);
-            address underlyingBorrowToken = address(markets[i].data().underlyingBorrowToken);
+            if (!_isSizeMarket(sizeFactory, markets[i])) {
+                continue;
+            }
+            ISize market = ISize(markets[i]);
+            address underlyingCollateralToken = address(market.data().underlyingCollateralToken);
+            address underlyingBorrowToken = address(market.data().underlyingBorrowToken);
             if (underlyingBorrowToken != USDC) {
                 continue;
             }
@@ -77,8 +81,12 @@ contract ProposeSafeTxUpdatePriceFeedChainlinkOnly4xV2Script is BaseScript, Netw
         uint256 index;
 
         for (uint256 i = 0; i < markets.length; i++) {
-            address underlyingCollateralToken = address(markets[i].data().underlyingCollateralToken);
-            address underlyingBorrowToken = address(markets[i].data().underlyingBorrowToken);
+            if (!_isSizeMarket(sizeFactory, markets[i])) {
+                continue;
+            }
+            ISize market = ISize(markets[i]);
+            address underlyingCollateralToken = address(market.data().underlyingCollateralToken);
+            address underlyingBorrowToken = address(market.data().underlyingBorrowToken);
             if (underlyingBorrowToken != USDC) {
                 continue;
             }
@@ -87,12 +95,12 @@ contract ProposeSafeTxUpdatePriceFeedChainlinkOnly4xV2Script is BaseScript, Netw
                 continue;
             }
 
-            IPriceFeed oldFeed = IPriceFeed(markets[i].oracle().priceFeed);
+            IPriceFeed oldFeed = IPriceFeed(market.oracle().priceFeed);
             PriceFeedChainlinkOnly4xV2 updated = underlyingCollateralToken == susde
                 ? _deploySusdeUsdcChainlinkOnly(susdeChainlinkParams)
                 : _deployV2FromLegacy(PriceFeedChainlinkOnly4x(address(oldFeed)));
 
-            targets[index] = address(markets[i]);
+            targets[index] = address(market);
             datas[index] = abi.encodeCall(
                 ISizeAdmin.updateConfig,
                 (UpdateConfigParams({key: "priceFeed", value: uint256(uint160(address(updated)))}))
@@ -101,7 +109,7 @@ contract ProposeSafeTxUpdatePriceFeedChainlinkOnly4xV2Script is BaseScript, Netw
             string memory logMessage = string.concat(
                 "market",
                 " ",
-                vm.toString(address(markets[i])),
+                vm.toString(address(market)),
                 " (",
                 IERC20Metadata(underlyingCollateralToken).symbol(),
                 "/",

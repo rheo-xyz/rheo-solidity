@@ -85,11 +85,12 @@ abstract contract CollectionsManagerView is ICollectionsManagerView, Collections
                             APR VIEW
     //////////////////////////////////////////////////////////////*/
 
+    // slither-disable-start calls-loop
     function _isUserDefinedLimitOrderNull(address user, ISize market, bool isLoanOffer) private view returns (bool) {
-        // slither-disable-next-line calls-loop
         (bool isLoanOfferNull, bool isBorrowOfferNull) = market.isUserDefinedLimitOrdersNull(user);
         return isLoanOffer ? isLoanOfferNull : isBorrowOfferNull;
     }
+    // slither-disable-end calls-loop
 
     /// @inheritdoc ICollectionsManagerView
     function getLoanOfferAPR(address user, uint256 collectionId, ISize market, address rateProvider, uint256 tenor)
@@ -124,7 +125,9 @@ abstract contract CollectionsManagerView is ICollectionsManagerView, Collections
         }
         // else if the user is not copying the collection market rate provider, revert
         else if (!isCopyingCollectionMarketRateProvider(user, collectionId, market, rateProvider)) {
-            revert InvalidCollectionMarketRateProvider(collectionId, address(market), rateProvider);
+            revert ICollectionsManagerView.InvalidCollectionMarketRateProvider(
+                collectionId, address(market), rateProvider
+            );
         }
         // else, return the yield curve for that collection, market and rate provider
         else {
@@ -132,7 +135,7 @@ abstract contract CollectionsManagerView is ICollectionsManagerView, Collections
             CopyLimitOrderConfig memory copyLimitOrder =
                 _getCopyLimitOrderConfig(user, collectionId, market, isLoanOffer);
             if (tenor < copyLimitOrder.minTenor || tenor > copyLimitOrder.maxTenor) {
-                revert InvalidTenor(tenor, copyLimitOrder.minTenor, copyLimitOrder.maxTenor);
+                revert ICollectionsManagerView.InvalidTenor(tenor, copyLimitOrder.minTenor, copyLimitOrder.maxTenor);
             } else {
                 uint256 baseAPR = _getUserDefinedLimitOrderAPR(rateProvider, market, tenor, isLoanOffer);
                 // apply offset APR

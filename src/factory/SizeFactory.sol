@@ -25,6 +25,13 @@ import {
     InitializeRiskConfigParams
 } from "@src/market/libraries/actions/Initialize.sol";
 
+import {
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
+
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -35,7 +42,9 @@ import {Errors} from "@src/market/libraries/Errors.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
+import {ISizeFactoryV1_9} from "@src/factory/interfaces/ISizeFactoryV1_9.sol";
 import {MarketFactoryLibrary} from "@src/factory/libraries/MarketFactoryLibrary.sol";
+import {RheoMarketFactoryLibrary} from "@src/factory/libraries/RheoMarketFactoryLibrary.sol";
 
 import {NonTransferrableRebasingTokenVaultLibrary} from
     "@src/factory/libraries/NonTransferrableRebasingTokenVaultLibrary.sol";
@@ -102,6 +111,15 @@ contract SizeFactory is
         sizeImplementation = _sizeImplementation;
     }
 
+    /// @inheritdoc ISizeFactoryV1_9
+    function setRheoImplementation(address _rheoImplementation) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_rheoImplementation == address(0)) {
+            revert Errors.NULL_ADDRESS();
+        }
+        emit RheoImplementationSet(rheoImplementation, _rheoImplementation);
+        rheoImplementation = _rheoImplementation;
+    }
+
     /// @inheritdoc ISizeFactory
     function setNonTransferrableRebasingTokenVaultImplementation(address _nonTransferrableTokenVaultImplementation)
         external
@@ -135,6 +153,22 @@ contract SizeFactory is
         // slither-disable-next-line unused-return
         markets.add(address(market));
         emit CreateMarket(address(market));
+    }
+
+    /// @inheritdoc ISizeFactoryV1_9
+    function createMarketRheo(
+        InitializeFeeConfigParamsRheo calldata feeConfigParamsRheo,
+        InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
+        InitializeOracleParamsRheo calldata oracleParamsRheo,
+        InitializeDataParamsRheo calldata dataParamsRheo
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
+        address admin = msg.sender;
+        market = RheoMarketFactoryLibrary.createMarketRheo(
+            rheoImplementation, admin, feeConfigParamsRheo, riskConfigParamsRheo, oracleParamsRheo, dataParamsRheo
+        );
+        // slither-disable-next-line unused-return
+        markets.add(market);
+        emit CreateMarket(market);
     }
 
     /// @inheritdoc ISizeFactory
@@ -173,6 +207,11 @@ contract SizeFactory is
     /// @inheritdoc ISizeFactory
     function isMarket(address candidate) public view returns (bool) {
         return markets.contains(candidate);
+    }
+
+    /// @inheritdoc ISizeFactoryV1_9
+    function isRheoMarket(address candidate) public view returns (bool) {
+        return markets.contains(candidate) && _isRheoMarket(candidate);
     }
 
     /// @inheritdoc ISizeFactoryV1_7
@@ -215,11 +254,11 @@ contract SizeFactory is
     }
 
     /// @inheritdoc ISizeFactoryV1_8
-    function callMarket(ISize market, bytes calldata data) external returns (bytes memory result) {
-        if (!isMarket(address(market))) {
-            revert Errors.INVALID_MARKET(address(market));
+    function callMarket(address market, bytes calldata data) external returns (bytes memory result) {
+        if (!isMarket(market)) {
+            revert Errors.INVALID_MARKET(market);
         }
-        result = Address.functionCall(address(market), data);
+        result = Address.functionCall(market, data);
     }
 
     /// @inheritdoc ISizeFactoryV1_8

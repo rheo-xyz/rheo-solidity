@@ -106,7 +106,7 @@ contract ProposeSafeTxDeployPTMarketsScript is BaseScript, Networks {
 
         vm.stopBroadcast();
 
-        ISize market = sizeFactory.getMarket(0);
+        ISize market = ISize(sizeFactory.getMarket(0));
         InitializeFeeConfigParams memory feeConfigParams = market.feeConfig();
 
         InitializeRiskConfigParams memory riskConfigParams = market.riskConfig(); // crOpening, crLiquidation replaced below

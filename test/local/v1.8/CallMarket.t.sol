@@ -95,7 +95,7 @@ contract CallMarketTest is BaseTest {
         datas[1] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_7.depositOnBehalfOf,
                     (
@@ -110,7 +110,7 @@ contract CallMarketTest is BaseTest {
         datas[2] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_7.sellCreditMarketOnBehalfOf,
                     (
@@ -136,7 +136,7 @@ contract CallMarketTest is BaseTest {
         datas[3] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size2,
+                address(size2),
                 abi.encodeCall(
                     ISizeV1_7.depositOnBehalfOf,
                     (
@@ -151,7 +151,7 @@ contract CallMarketTest is BaseTest {
         datas[4] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size2,
+                address(size2),
                 abi.encodeCall(
                     ISizeV1_7.sellCreditMarketOnBehalfOf,
                     (
@@ -177,7 +177,7 @@ contract CallMarketTest is BaseTest {
         datas[5] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_7.withdrawOnBehalfOf,
                     (
@@ -202,7 +202,7 @@ contract CallMarketTest is BaseTest {
         vm.startPrank(bob);
         vm.expectRevert(abi.encodeWithSelector(Errors.INVALID_MARKET.selector, address(alice)));
         sizeFactory.callMarket(
-            ISize(address(alice)),
+            address(alice),
             abi.encodeCall(ISize.withdraw, (WithdrawParams({token: address(usdc), amount: 100e6, to: bob})))
         );
     }
@@ -232,7 +232,7 @@ contract CallMarketTest is BaseTest {
         datas[1] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_7.setCopyLimitOrderConfigsOnBehalfOf,
                     (
@@ -250,7 +250,7 @@ contract CallMarketTest is BaseTest {
         datas[2] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size2,
+                address(size2),
                 abi.encodeCall(
                     ISizeV1_7.setCopyLimitOrderConfigsOnBehalfOf,
                     (
@@ -312,7 +312,7 @@ contract CallMarketTest is BaseTest {
         datas[1] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_8.setVaultOnBehalfOf,
                     (
@@ -327,7 +327,7 @@ contract CallMarketTest is BaseTest {
         datas[2] = abi.encodeCall(
             ISizeFactoryV1_8.callMarket,
             (
-                size1,
+                address(size1),
                 abi.encodeCall(
                     ISizeV1_7.depositOnBehalfOf,
                     (

@@ -153,15 +153,16 @@ contract ForkPriceFeedChainlinkOnly4xBugReportTest is ForkTest, MainnetAddresses
         view
         returns (ISize)
     {
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            IERC20Metadata collateralToken = markets[i].data().underlyingCollateralToken;
-            IERC20Metadata borrowToken = markets[i].data().underlyingBorrowToken;
+            ISize market = ISize(markets[i]);
+            IERC20Metadata collateralToken = market.data().underlyingCollateralToken;
+            IERC20Metadata borrowToken = market.data().underlyingBorrowToken;
             if (
                 Strings.equal(collateralToken.symbol(), collateralSymbol)
                     && Strings.equal(borrowToken.symbol(), borrowSymbol)
             ) {
-                return markets[i];
+                return market;
             }
         }
         revert("Market not found");

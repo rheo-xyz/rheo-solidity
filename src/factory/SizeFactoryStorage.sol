@@ -5,7 +5,6 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 import {ICollectionsManager} from "@src/collections/interfaces/ICollectionsManager.sol";
 import {ActionsBitmap} from "@src/factory/libraries/Authorization.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
 
 /// @title SizeFactoryStorage
 /// @custom:security-contact security@size.credit
@@ -32,6 +31,8 @@ abstract contract SizeFactoryStorage {
     mapping(address onBehalfOf => uint256 nonce) public authorizationNonces;
     // collections manager (added in v1.8)
     ICollectionsManager public collectionsManager;
+    // the rheo fm implementation (used as implementation for proxy contracts, added in v1.9)
+    address public rheoImplementation;
 }
 // slither-disable-end constable-states
 // slither-disable-end uninitialized-state

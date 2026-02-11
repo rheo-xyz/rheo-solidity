@@ -14,7 +14,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
 
 import {DataView} from "@src/market/SizeViewData.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
+import {ISize, VERSION as SIZE_VERSION} from "@src/market/interfaces/ISize.sol";
 import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
 
 import {YieldCurve} from "@src/market/libraries/YieldCurveLibrary.sol";
@@ -56,7 +56,7 @@ contract ForkProposeSafeTxUpgradeCollectionsManagerV1_8_4_Update2Test is ForkTes
         _upgradeToV1_8_4();
 
         ISize market = _findMarket("WETH", "USDC");
-        assertEq(ISizeView(address(market)).version(), "v1.8.4");
+        assertEq(ISizeView(address(market)).version(), SIZE_VERSION);
 
         // Pre-upgrade: the on-chain CollectionsManager implementation still calls the legacy
         // per-offer null-check helpers, which are not implemented by v1.8.4 Size markets.

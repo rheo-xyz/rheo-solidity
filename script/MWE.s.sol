@@ -35,7 +35,7 @@ contract MWEScript is BaseScript, Networks {
     }
 
     function run() external parseEnv {
-        ISize market = sizeFactory.getMarket(1);
+        ISize market = ISize(sizeFactory.getMarket(1));
         IPriceFeed oldPriceFeed = IPriceFeed(market.oracle().priceFeed);
         uint256 oldPrice = oldPriceFeed.getPrice();
         console.log("old Price Feed", address(oldPriceFeed));

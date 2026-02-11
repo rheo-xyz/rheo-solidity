@@ -33,7 +33,7 @@ contract GetV1_5ReinitializeDataScript is BaseScript, Networks {
         uint256[2] memory deploymentBlocks = block.chainid == BASE_MAINNET
             ? [uint256(17147278), uint256(20637165)]
             : [uint256(18082649), uint256(18082796)];
-        ISize market0 = sizeFactory.getMarket(0);
+        ISize market0 = ISize(sizeFactory.getMarket(0));
         address borrowTokenVault = address(market0.data().borrowTokenVault);
 
         console.log("GetV1_5ReinitializeData...");

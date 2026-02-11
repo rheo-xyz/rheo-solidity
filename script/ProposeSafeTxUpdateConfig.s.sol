@@ -39,20 +39,32 @@ contract ProposeSafeTxUpdateConfigScript is BaseScript, Networks {
     }
 
     function run() public parseEnv broadcast {
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory marketAddresses = sizeFactory.getMarkets();
 
         string memory updateConfigKey = "swapFeeAPR";
         uint256 updateConfigValue = 0.005e18;
 
-        address[] memory targets = new address[](markets.length);
-        bytes[] memory datas = new bytes[](markets.length);
+        uint256 sizeMarketsCount;
+        for (uint256 i = 0; i < marketAddresses.length; i++) {
+            if (_isSizeMarket(sizeFactory, marketAddresses[i])) {
+                sizeMarketsCount++;
+            }
+        }
+
+        address[] memory targets = new address[](sizeMarketsCount);
+        bytes[] memory datas = new bytes[](sizeMarketsCount);
 
         // Size.updateConfig(key, value) for all markets
-        for (uint256 i = 0; i < markets.length; i++) {
-            targets[i] = address(markets[i]);
-            datas[i] = abi.encodeCall(
+        uint256 index;
+        for (uint256 i = 0; i < marketAddresses.length; i++) {
+            if (!_isSizeMarket(sizeFactory, marketAddresses[i])) {
+                continue;
+            }
+            targets[index] = marketAddresses[i];
+            datas[index] = abi.encodeCall(
                 Size.updateConfig, (UpdateConfigParams({key: updateConfigKey, value: updateConfigValue}))
             );
+            index++;
         }
 
         safe.proposeTransactions(targets, datas, signer, derivationPath);

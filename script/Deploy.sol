@@ -357,7 +357,7 @@ abstract contract Deploy {
         priceFeed2 = new PriceFeedMock(address(this));
         priceFeed2.setPrice(1e18);
 
-        ISize market = sizeFactory.getMarket(0);
+        ISize market = ISize(sizeFactory.getMarket(0));
         InitializeFeeConfigParams memory feeConfigParams = market.feeConfig();
 
         InitializeRiskConfigParams memory riskConfigParams = market.riskConfig();

@@ -128,14 +128,15 @@ contract BaseTest is Test, Deploy, AssertsHelper {
     }
 
     function _findMarket(string memory collateralSymbol, string memory borrowSymbol) internal view returns (ISize) {
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            DataView memory dataView = ISizeView(address(markets[i])).data();
+            ISize market = ISize(markets[i]);
+            DataView memory dataView = ISizeView(address(market)).data();
             if (
                 Strings.equal(dataView.underlyingCollateralToken.symbol(), collateralSymbol)
                     && Strings.equal(dataView.underlyingBorrowToken.symbol(), borrowSymbol)
             ) {
-                return markets[i];
+                return market;
             }
         }
 
