@@ -186,6 +186,12 @@ Since Size v1.8, collections of markets, curators and rate providers are core en
 - For the sake of clarity, `getLoanOfferAPR` and `getBorrowOfferAPR` on the `SizeView` contract were renamed to `getUserDefinedLoanOfferAPR` and `getUserDefinedBorrowOfferAPR` to be explicit about whether the yield curve is from a rate provider or from the user themselves.
 - Some infrequently utilized `SizeView` functions were removed to make room for the additional `WithCollection` functions and not break the max contract size limit.
 
+## Rheo FM migration
+
+After v1.9, the `SizeFactory` is updated to create fixed maturity Rheo markets, while old markets are completely shutdown as part of the migration script.
+
+Source code is at https://github.com/rheo-xyz/rheo-fm
+
 ## Test
 
 ```bash
