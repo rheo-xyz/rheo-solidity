@@ -231,15 +231,16 @@ abstract contract BaseScript is Script {
         string memory underlyingCollateralTokenSymbol,
         string memory underlyingBorrowTokenSymbol
     ) internal view returns (ISize market) {
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         bytes32 collateralHash = keccak256(bytes(underlyingCollateralTokenSymbol));
         bytes32 borrowHash = keccak256(bytes(underlyingBorrowTokenSymbol));
         for (uint256 i = 0; i < markets.length; i++) {
+            ISize candidate = ISize(markets[i]);
             if (
-                keccak256(bytes(markets[i].data().underlyingCollateralToken.symbol())) == collateralHash
-                    && keccak256(bytes(markets[i].data().underlyingBorrowToken.symbol())) == borrowHash
+                keccak256(bytes(candidate.data().underlyingCollateralToken.symbol())) == collateralHash
+                    && keccak256(bytes(candidate.data().underlyingBorrowToken.symbol())) == borrowHash
             ) {
-                return markets[i];
+                return candidate;
             }
         }
         revert("market not found");

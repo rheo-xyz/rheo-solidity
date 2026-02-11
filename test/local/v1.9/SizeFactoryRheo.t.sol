@@ -171,5 +171,40 @@ contract SizeFactoryRheoTest is BaseTest {
         assertEq(address(marketProxy.data().underlyingCollateralToken), dRheo.underlyingCollateralToken);
         assertEq(address(marketProxy.data().underlyingBorrowToken), dRheo.underlyingBorrowToken);
         assertEq(address(marketProxy.data().borrowTokenVault), dRheo.borrowTokenVault);
+
+        string[] memory descriptions = sizeFactory.getMarketDescriptions();
+        assertEq(descriptions.length, 2);
+        assertEq(descriptions[1], string.concat("Rheo | WETH | USDC | 130 | ", VERSION));
+    }
+
+    function test_SizeFactory_isRheoMarket_returns_false_for_size_market() public view {
+        address legacySizeMarket = sizeFactory.getMarket(0);
+        assertTrue(sizeFactory.isMarket(legacySizeMarket));
+        assertFalse(sizeFactory.isRheoMarket(legacySizeMarket));
+    }
+
+    function test_SizeFactory_isRheoMarket_returns_true_for_rheo_market_and_false_after_remove() public {
+        Rheo implementation = new Rheo();
+        vm.prank(owner);
+        sizeFactory.setRheoImplementation(address(implementation));
+
+        (
+            InitializeFeeConfigParamsRheo memory fRheo,
+            InitializeRiskConfigParamsRheo memory rRheo,
+            InitializeOracleParamsRheo memory oRheo,
+            InitializeDataParamsRheo memory dRheo
+        ) = _defaultRheoParams();
+
+        vm.prank(owner);
+        address rheoMarket = sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+
+        assertTrue(sizeFactory.isMarket(rheoMarket));
+        assertTrue(sizeFactory.isRheoMarket(rheoMarket));
+
+        vm.prank(owner);
+        sizeFactory.removeMarket(rheoMarket);
+
+        assertFalse(sizeFactory.isMarket(rheoMarket));
+        assertFalse(sizeFactory.isRheoMarket(rheoMarket));
     }
 }

@@ -26,18 +26,18 @@ contract DepositToAllUnpausedMarketsScript is BaseScript, Networks {
 
     function run() external broadcast {
         ISizeFactory sizeFactory = ISizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory markets = sizeFactory.getMarkets();
-        ISize[] memory unpausedMarkets = new ISize[](markets.length);
-        IERC20Metadata underlyingBorrowToken = IERC20Metadata(markets[0].data().underlyingBorrowToken);
+        address[] memory markets = sizeFactory.getMarkets();
+        address[] memory unpausedMarkets = new address[](markets.length);
+        IERC20Metadata underlyingBorrowToken = IERC20Metadata(ISize(markets[0]).data().underlyingBorrowToken);
         uint256 amount = 10 ** underlyingBorrowToken.decimals();
         uint256 unpausedMarketsLength = 0;
         for (uint256 i = 0; i < markets.length; i++) {
-            if (!PausableUpgradeable(address(markets[i])).paused()) {
+            if (!PausableUpgradeable(markets[i]).paused() && _isSizeMarket(sizeFactory, markets[i])) {
                 unpausedMarkets[unpausedMarketsLength] = markets[i];
                 unpausedMarketsLength++;
             }
         }
-        _unsafeSetLength(unpausedMarkets, unpausedMarketsLength);
+        _unsafeSetLengthAddress(unpausedMarkets, unpausedMarketsLength);
         bytes[] memory datas = new bytes[](1 + unpausedMarketsLength + 1);
         datas[0] = abi.encodeCall(
             ISizeFactoryV1_7.setAuthorization, (address(sizeFactory), Authorization.getActionsBitmap(Action.DEPOSIT))
@@ -55,7 +55,7 @@ contract DepositToAllUnpausedMarketsScript is BaseScript, Networks {
                                 params: DepositParams({
                                     token: address(underlyingBorrowToken),
                                     amount: amount,
-                                    to: address(unpausedMarkets[i])
+                                    to: unpausedMarkets[i]
                                 }),
                                 onBehalfOf: msg.sender
                             })
@@ -67,5 +67,11 @@ contract DepositToAllUnpausedMarketsScript is BaseScript, Networks {
         datas[unpausedMarketsLength + 1] =
             abi.encodeCall(ISizeFactoryV1_7.setAuthorization, (address(sizeFactory), Authorization.nullActionsBitmap()));
         MulticallUpgradeable(address(sizeFactory)).multicall(datas);
+    }
+
+    function _unsafeSetLengthAddress(address[] memory markets, uint256 length) private pure {
+        assembly ("memory-safe") {
+            mstore(markets, length)
+        }
     }
 }

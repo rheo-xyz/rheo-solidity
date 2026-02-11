@@ -34,9 +34,9 @@ interface ISizeFactoryV1_8 {
     /// @notice Call a market with data. This can be used to batch operations on multiple markets.
     /// @param market The market to call
     /// @param data The data to call the market with
-    /// @dev Anybody can do arbitrary Size calls with this function, so users MUST revoke authorizations at the end of the transaction.
-    ///      Since this function executes arbitrary calls on Size markets, it should not have any trust assumptions on the ACL of factory-executed calls.
-    function callMarket(ISize market, bytes calldata data) external returns (bytes memory);
+    /// @dev Anybody can do arbitrary market calls with this function, so users MUST revoke authorizations at the end of the transaction.
+    ///      Since this function executes arbitrary calls on factory-registered markets, it should not have any trust assumptions on the ACL of factory-executed calls.
+    function callMarket(address market, bytes calldata data) external returns (bytes memory);
 
     /// @notice Subscribe to collections
     /// @param collectionIds The collection ids to subscribe to

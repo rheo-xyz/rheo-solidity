@@ -68,7 +68,7 @@ contract ProposeSafeTxDeployPTMarketScript is BaseScript, Networks {
     }
 
     function run() external parseEnv deleteVirtualTestnets {
-        ISize market = sizeFactory.getMarket(1);
+        ISize market = ISize(sizeFactory.getMarket(1));
         InitializeFeeConfigParams memory feeConfigParams = market.feeConfig();
 
         InitializeRiskConfigParams memory riskConfigParams = market.riskConfig();

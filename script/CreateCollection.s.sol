@@ -25,12 +25,12 @@ contract CreateCollectionScript is BaseScript, Networks {
         SizeFactory sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
         ICollectionsManager collectionsManager = sizeFactory.collectionsManager();
         uint256 collectionId = collectionsManager.createCollection();
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         ISize[] memory unpausedMarkets = new ISize[](markets.length);
         uint256 j = 0;
         for (uint256 i = 0; i < markets.length; i++) {
-            if (!PausableUpgradeable(address(markets[i])).paused()) {
-                unpausedMarkets[j] = markets[i];
+            if (!PausableUpgradeable(markets[i]).paused() && _isSizeMarket(sizeFactory, markets[i])) {
+                unpausedMarkets[j] = ISize(markets[i]);
                 j++;
             }
         }

@@ -209,6 +209,11 @@ contract SizeFactory is
         return markets.contains(candidate);
     }
 
+    /// @inheritdoc ISizeFactoryV1_9
+    function isRheoMarket(address candidate) public view returns (bool) {
+        return markets.contains(candidate) && _isRheoMarket(candidate);
+    }
+
     /// @inheritdoc ISizeFactoryV1_7
     function setAuthorization(address operator, ActionsBitmap actionsBitmap) external override(ISizeFactoryV1_7) {
         // validate msg.sender
@@ -249,11 +254,11 @@ contract SizeFactory is
     }
 
     /// @inheritdoc ISizeFactoryV1_8
-    function callMarket(ISize market, bytes calldata data) external returns (bytes memory result) {
-        if (!isMarket(address(market))) {
-            revert Errors.INVALID_MARKET(address(market));
+    function callMarket(address market, bytes calldata data) external returns (bytes memory result) {
+        if (!isMarket(market)) {
+            revert Errors.INVALID_MARKET(market);
         }
-        result = Address.functionCall(address(market), data);
+        result = Address.functionCall(market, data);
     }
 
     /// @inheritdoc ISizeFactoryV1_8

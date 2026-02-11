@@ -257,7 +257,7 @@ contract ProposeSafeTxDeployMarketsSepScript is BaseScript, Networks, MainnetAdd
             InitializeDataParams memory dataParams
         )
     {
-        ISize market = sizeFactory.getMarket(0);
+        ISize market = ISize(sizeFactory.getMarket(0));
         feeConfigParams = market.feeConfig();
 
         riskConfigParams = market.riskConfig(); // crOpening, crLiquidation replaced below

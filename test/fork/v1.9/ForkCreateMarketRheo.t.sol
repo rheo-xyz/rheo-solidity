@@ -103,9 +103,12 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
 
     function _findRheoMarketWethUsdc() internal view returns (IRheo) {
         address weth = contracts[block.chainid][Contract.WETH];
-        ISize[] memory markets = factory.getMarkets();
+        address[] memory markets = factory.getMarkets();
         for (uint256 i = 0; i < markets.length; i++) {
-            IRheo m = IRheo(payable(address(markets[i])));
+            if (!factory.isRheoMarket(markets[i])) {
+                continue;
+            }
+            IRheo m = IRheo(payable(markets[i]));
             if (address(m.data().underlyingCollateralToken) == weth) {
                 // WETH/USDC market on all supported networks borrows USDC.
                 return m;

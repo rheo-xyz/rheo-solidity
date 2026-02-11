@@ -519,14 +519,36 @@ abstract contract Networks {
     }
 
     function getUnpausedMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
-        markets = _sizeFactory.getMarkets();
+        address[] memory marketAddresses = _sizeFactory.getMarkets();
+        bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
+        markets = new ISize[](marketAddresses.length);
         uint256 j = 0;
-        for (uint256 i = 0; i < markets.length; i++) {
-            if (!PausableUpgradeable(address(markets[i])).paused()) {
-                markets[j++] = markets[i];
+        for (uint256 i = 0; i < marketAddresses.length; i++) {
+            if (
+                !PausableUpgradeable(marketAddresses[i]).paused()
+                    && _isSizeMarket(_sizeFactory, isFactoryV1_9, marketAddresses[i])
+            ) {
+                markets[j++] = ISize(marketAddresses[i]);
             }
         }
         _unsafeSetLength(markets, j);
+    }
+
+    function _isFactoryV1_9(ISizeFactory sizeFactory) internal view returns (bool) {
+        bytes memory versionBytes = bytes(sizeFactory.version());
+        return versionBytes.length >= 4 && versionBytes[0] == bytes1("v") && versionBytes[1] == bytes1("1")
+            && versionBytes[2] == bytes1(".") && versionBytes[3] == bytes1("9");
+    }
+
+    function _isSizeMarket(ISizeFactory sizeFactory, bool isFactoryV1_9, address market) internal view returns (bool) {
+        if (!isFactoryV1_9) {
+            return true;
+        }
+        return !sizeFactory.isRheoMarket(market);
+    }
+
+    function _isSizeMarket(ISizeFactory sizeFactory, address market) internal view returns (bool) {
+        return _isSizeMarket(sizeFactory, _isFactoryV1_9(sizeFactory), market);
     }
 
     function _unsafeSetLength(ISize[] memory markets, uint256 length) internal pure {

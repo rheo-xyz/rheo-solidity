@@ -89,11 +89,11 @@ contract SizeFactoryTest is BaseTest {
 
         vm.prank(owner);
         sizeFactory.createMarket(f, r, o, d);
-        ISize[] memory markets = sizeFactory.getMarkets();
+        address[] memory markets = sizeFactory.getMarkets();
         assertEq(markets.length, 3);
         assertEq(markets.length, sizeFactory.getMarketsCount());
         for (uint256 i = 0; i < markets.length - 1; i++) {
-            assertTrue(address(markets[i]) != address(0));
+            assertTrue(markets[i] != address(0));
             assertTrue(markets[i] != markets[i + 1]);
         }
         assertEq(sizeFactory.getMarketDescriptions()[2], string.concat("Size | stETH | WETH | 125 | ", VERSION));

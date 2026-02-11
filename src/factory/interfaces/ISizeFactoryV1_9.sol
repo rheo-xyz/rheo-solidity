@@ -25,4 +25,9 @@ interface ISizeFactoryV1_9 {
     /// @notice Set the Rheo implementation
     /// @param _rheoImplementation The new Rheo implementation
     function setRheoImplementation(address _rheoImplementation) external;
+
+    /// @notice Check if an address is a registered Rheo market
+    /// @param candidate The candidate market to check
+    /// @return True if the candidate is a registered Rheo market
+    function isRheoMarket(address candidate) external view returns (bool);
 }
