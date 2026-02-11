@@ -44,7 +44,7 @@ import {ISize} from "@src/market/interfaces/ISize.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {ISizeFactoryV1_9} from "@src/factory/interfaces/ISizeFactoryV1_9.sol";
 import {MarketFactoryLibrary} from "@src/factory/libraries/MarketFactoryLibrary.sol";
-import {RheoMarketFactoryLibrary} from "@src/factory/libraries/RheoFMMarketFactoryLibrary.sol";
+import {RheoMarketFactoryLibrary} from "@src/factory/libraries/RheoMarketFactoryLibrary.sol";
 
 import {NonTransferrableRebasingTokenVaultLibrary} from
     "@src/factory/libraries/NonTransferrableRebasingTokenVaultLibrary.sol";
