@@ -6,7 +6,6 @@ import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/interfaces/Ag
 import {MockV3Aggregator} from "@chainlink/contracts/src/v0.8/tests/MockV3Aggregator.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {MockERC20} from "@solady/test/utils/mocks/MockERC20.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
@@ -17,7 +16,6 @@ import {PriceFeed, PriceFeedParams} from "@src/oracle/v1.5.1/PriceFeed.sol";
 import {BaseTest} from "@test/BaseTest.sol";
 
 import {SizeMock} from "@test/mocks/SizeMock.sol";
-import {ToggleSymbolMockERC20} from "@test/mocks/ToggleSymbolMockERC20.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3PoolActions} from "@uniswap/v3-core/contracts/interfaces/pool/IUniswapV3PoolActions.sol";
@@ -230,20 +228,6 @@ contract SizeFactoryTest is BaseTest {
 
         assertEq(descriptions.length, 2);
         assertEq(descriptions[1], string.concat("Size | MTA | MTB | 120 | ", VERSION));
-    }
-
-    function test_SizeFactory_getMarketDescriptions_fallbacks_to_address_when_token_symbol_reverts() public {
-        ToggleSymbolMockERC20 brokenCollateral = new ToggleSymbolMockERC20("Broken Collateral", "BROKEN", 18);
-        d.underlyingCollateralToken = address(brokenCollateral);
-        d.underlyingBorrowToken = address(usdc);
-
-        vm.prank(owner);
-        address market = address(sizeFactory.createMarket(f, r, o, d));
-
-        brokenCollateral.setShouldRevertSymbol(true);
-        string[] memory descriptions = sizeFactory.getMarketDescriptions();
-        assertEq(descriptions.length, 2);
-        assertEq(descriptions[1], string.concat("Size | ", Strings.toHexString(market)));
     }
 
     function test_SizeFactory_version() public view {

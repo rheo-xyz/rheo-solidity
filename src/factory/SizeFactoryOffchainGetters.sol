@@ -57,17 +57,15 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
         string memory marketType = _isRheoMarket(market) ? "Rheo" : "Size";
         (address collateralToken, address borrowToken, bool hasData) = _tryGetMarketData(market);
         (uint256 crLiquidationPercent, bool hasRiskConfig) = _tryGetCrLiquidationPercent(market);
-        (string memory marketVersion, bool hasVersion) = _tryGetVersion(market);
-
-        if (!hasData || !hasRiskConfig || !hasVersion) {
+        if (!hasData || !hasRiskConfig) {
             return string.concat(marketType, " | ", Strings.toHexString(market));
         }
 
-        (string memory collateralSymbol, bool hasCollateralSymbol) = _tryGetSymbol(collateralToken);
-        (string memory borrowSymbol, bool hasBorrowSymbol) = _tryGetSymbol(borrowToken);
-        if (!hasCollateralSymbol || !hasBorrowSymbol) {
-            return string.concat(marketType, " | ", Strings.toHexString(market));
-        }
+        // slither-disable-next-line calls-loop
+        string memory collateralSymbol = IERC20Metadata(collateralToken).symbol();
+        // slither-disable-next-line calls-loop
+        string memory borrowSymbol = IERC20Metadata(borrowToken).symbol();
+        string memory marketVersion = _getVersion(market);
 
         return string.concat(
             marketType,
@@ -87,6 +85,7 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
         view
         returns (address collateralToken, address borrowToken, bool)
     {
+        // slither-disable-next-line calls-loop
         (bool success, bytes memory marketData) = market.staticcall(abi.encodeWithSelector(DATA_SELECTOR));
         if (!success || marketData.length < 128) {
             return (address(0), address(0), false);
@@ -100,6 +99,7 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
     }
 
     function _tryGetCrLiquidationPercent(address market) private view returns (uint256 crLiquidationPercent, bool) {
+        // slither-disable-next-line calls-loop
         (bool success, bytes memory riskConfigData) = market.staticcall(abi.encodeWithSelector(RISK_CONFIG_SELECTOR));
         if (!success || riskConfigData.length < 64) {
             return (0, false);
@@ -126,39 +126,19 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
 
     function _isRheoMarket(address market) internal view returns (bool) {
         // Size markets return (address,uint64) for oracle(), while Rheo markets return (address).
+        // slither-disable-next-line calls-loop
         (bool success, bytes memory result) = market.staticcall(abi.encodeWithSelector(ORACLE_SELECTOR));
         return success && result.length == 32;
     }
 
-    function _tryGetVersion(address market) private view returns (string memory marketVersion, bool) {
+    function _getVersion(address market) private view returns (string memory marketVersion) {
+        // slither-disable-next-line calls-loop
         (bool success, bytes memory versionData) = market.staticcall(abi.encodeWithSelector(VERSION_SELECTOR));
-        if (!success || versionData.length < 64) {
-            return ("", false);
-        }
-
-        uint256 offset;
-        uint256 stringLength;
-        assembly ("memory-safe") {
-            offset := mload(add(versionData, 0x20))
-            stringLength := mload(add(versionData, 0x40))
-        }
-        if (offset != 0x20) {
-            return ("", false);
-        }
-        if (versionData.length < 64 + 32 * ((stringLength + 31) / 32)) {
-            return ("", false);
+        if (!success) {
+            revert();
         }
 
         marketVersion = abi.decode(versionData, (string));
-        return (marketVersion, true);
-    }
-
-    function _tryGetSymbol(address token) private view returns (string memory symbol, bool) {
-        try IERC20Metadata(token).symbol() returns (string memory symbol_) {
-            return (symbol_, true);
-        } catch {
-            return ("", false);
-        }
     }
 
     /// @inheritdoc ISizeFactoryOffchainGetters
