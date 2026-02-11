@@ -7,11 +7,11 @@ import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 import {VERSION} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
 import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 import {Errors} from "@src/market/libraries/Errors.sol";
 
 import {BaseTest} from "@test/BaseTest.sol";

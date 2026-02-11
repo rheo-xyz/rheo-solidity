@@ -26,11 +26,11 @@ import {
 } from "@src/market/libraries/actions/Initialize.sol";
 
 import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";

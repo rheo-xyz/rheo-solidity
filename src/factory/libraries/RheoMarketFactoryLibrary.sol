@@ -4,11 +4,11 @@ pragma solidity 0.8.23;
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
 interface IRheoInitializer {
     function initialize(

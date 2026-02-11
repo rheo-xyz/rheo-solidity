@@ -2,11 +2,11 @@
 pragma solidity 0.8.23;
 
 import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
 /// @title ISizeFactoryV1_9
 /// @custom:security-contact security@size.credit

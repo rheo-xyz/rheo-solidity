@@ -30,11 +30,11 @@ import {MarketShutdownParams} from "@src/market/libraries/actions/MarketShutdown
 import {WithdrawParams} from "@src/market/libraries/actions/Withdraw.sol";
 
 import {
-    InitializeDataParamsRheo,
-    InitializeFeeConfigParamsRheo,
-    InitializeOracleParamsRheo,
-    InitializeRiskConfigParamsRheo
-} from "@src/factory/interfaces/RheoMarketTypes.sol";
+    InitializeDataParams as InitializeDataParamsRheo,
+    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
+    InitializeOracleParams as InitializeOracleParamsRheo,
+    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
+} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";

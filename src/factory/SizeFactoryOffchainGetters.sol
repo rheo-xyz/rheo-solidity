@@ -11,7 +11,7 @@ import {ISizeFactoryOffchainGetters} from "@src/factory/interfaces/ISizeFactoryO
 import {SizeFactoryStorage} from "@src/factory/SizeFactoryStorage.sol";
 import {ActionsBitmap, Authorization} from "@src/factory/libraries/Authorization.sol";
 
-import {VERSION} from "@src/market/interfaces/ISize.sol";
+import {VERSION as FACTORY_VERSION} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
 /// @title SizeFactoryOffchainGetters
 /// @custom:security-contact security@size.credit
@@ -159,6 +159,6 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
 
     /// @inheritdoc ISizeFactoryOffchainGetters
     function version() external pure returns (string memory) {
-        return VERSION;
+        return FACTORY_VERSION;
     }
 }

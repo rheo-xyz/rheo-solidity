@@ -9,6 +9,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {MockERC20} from "@solady/test/utils/mocks/MockERC20.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
+import {VERSION as FACTORY_VERSION} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
 import {VERSION} from "@src/market/interfaces/ISize.sol";
 import {Errors} from "@src/market/libraries/Errors.sol";
@@ -232,7 +233,7 @@ contract SizeFactoryTest is BaseTest {
 
     function test_SizeFactory_version() public view {
         string memory version = sizeFactory.version();
-        assertEq(version, VERSION);
+        assertEq(version, FACTORY_VERSION);
     }
 
     function test_SizeFactory_setSizeImplementation() public {
