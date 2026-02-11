@@ -71,6 +71,22 @@ contract SizeFactoryRheoTest is BaseTest {
         });
     }
 
+    function _createRheoMarket() internal returns (address rheoMarket) {
+        Rheo implementation = new Rheo();
+        vm.prank(owner);
+        sizeFactory.setRheoImplementation(address(implementation));
+
+        (
+            InitializeFeeConfigParamsRheo memory fRheo,
+            InitializeRiskConfigParamsRheo memory rRheo,
+            InitializeOracleParamsRheo memory oRheo,
+            InitializeDataParamsRheo memory dRheo
+        ) = _defaultRheoParams();
+
+        vm.prank(owner);
+        rheoMarket = sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+    }
+
     function test_SizeFactory_setRheoImplementation_revert_on_unauthorized() public {
         Rheo implementation = new Rheo();
 
@@ -130,19 +146,13 @@ contract SizeFactoryRheoTest is BaseTest {
     }
 
     function test_SizeFactory_createMarketRheo_deploys_proxy_initializes_and_registers_market() public {
-        Rheo implementation = new Rheo();
-        vm.prank(owner);
-        sizeFactory.setRheoImplementation(address(implementation));
-
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
             InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _defaultRheoParams();
-
-        vm.prank(owner);
-        address market = sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+        address market = _createRheoMarket();
 
         assertTrue(market != address(0));
         assertGt(market.code.length, 0);
@@ -184,19 +194,7 @@ contract SizeFactoryRheoTest is BaseTest {
     }
 
     function test_SizeFactory_isRheoMarket_returns_true_for_rheo_market_and_false_after_remove() public {
-        Rheo implementation = new Rheo();
-        vm.prank(owner);
-        sizeFactory.setRheoImplementation(address(implementation));
-
-        (
-            InitializeFeeConfigParamsRheo memory fRheo,
-            InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
-            InitializeDataParamsRheo memory dRheo
-        ) = _defaultRheoParams();
-
-        vm.prank(owner);
-        address rheoMarket = sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+        address rheoMarket = _createRheoMarket();
 
         assertTrue(sizeFactory.isMarket(rheoMarket));
         assertTrue(sizeFactory.isRheoMarket(rheoMarket));
@@ -206,5 +204,28 @@ contract SizeFactoryRheoTest is BaseTest {
 
         assertFalse(sizeFactory.isMarket(rheoMarket));
         assertFalse(sizeFactory.isRheoMarket(rheoMarket));
+    }
+
+    function test_SizeFactory_getMarket_and_getMarkets_support_size_and_rheo_market_addresses() public {
+        address rheoMarket = _createRheoMarket();
+
+        assertEq(sizeFactory.getMarket(0), address(size));
+        assertEq(sizeFactory.getMarket(1), rheoMarket);
+
+        address[] memory markets = sizeFactory.getMarkets();
+        assertEq(markets.length, 2);
+        assertEq(markets[0], address(size));
+        assertEq(markets[1], rheoMarket);
+    }
+
+    function test_SizeFactory_callMarket_supports_rheo_market() public {
+        address rheoMarket = _createRheoMarket();
+
+        bytes memory result = sizeFactory.callMarket(rheoMarket, abi.encodeWithSignature("version()"));
+        assertEq(abi.decode(result, (string)), VERSION);
+    }
+
+    function test_SizeFactory_isRheoMarket_returns_false_for_non_market_candidate() public {
+        assertFalse(sizeFactory.isRheoMarket(makeAddr("non-market")));
     }
 }
