@@ -55,6 +55,7 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         SizeFactory sizeFactory;
         address owner;
         ISize[] legacyMarkets;
+        bool createRheoMarkets;
         address newSizeFactoryImplementation;
         address newSizeImplementation;
         address newRheoImplementation;
@@ -108,6 +109,7 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         UpgradeCtx memory u;
         u.sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
         u.owner = contracts[block.chainid][Contract.SIZE_GOVERNANCE];
+        u.createRheoMarkets = _shouldCreateRheoMarkets();
 
         // Legacy markets we will migrate (unpaused only).
         u.legacyMarkets = getUnpausedMarkets(u.sizeFactory);
@@ -166,11 +168,13 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             }
         }
 
-        u.maturities = _v1_9Maturities();
+        if (u.createRheoMarkets) {
+            u.maturities = _v1_9Maturities();
+        }
 
         // Count calls (roughly):
         // - Upgrade factory + set impls + set collections manager.
-        // - For each legacy market: create Rheo market + shutdown (and pause for non-anchor markets).
+        // - For each legacy market: optionally create Rheo market + shutdown (and pause for non-anchor markets).
         // - For each group: withdraw (always), pause anchor, plus approve+deposit+approve(0) if depositing.
         // - Remove legacy markets from the factory registry.
         uint256 totalCalls = 0;
@@ -181,7 +185,9 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             totalCalls += u.legacyMarkets.length; // upgrade legacy Size markets
             totalCalls += 1; // setSizeImplementation
         }
-        totalCalls += u.legacyMarkets.length; // createMarketRheo
+        if (u.createRheoMarkets) {
+            totalCalls += u.legacyMarkets.length; // createMarketRheo
+        }
         totalCalls += u.legacyMarkets.length; // shutdown legacy (and pause non-anchor via multicall)
         totalCalls += u.groups; // withdraw per group
         totalCalls += u.groups; // pause anchor per group
@@ -220,14 +226,16 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             k++;
         }
 
-        // 4) Create Rheo markets (one per legacy unpaused market), copying params from the legacy Size market.
-        for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
-            targets[k] = address(u.sizeFactory);
-            datas[k] = _buildCreateMarketRheoCall(u.sizeFactory, u.legacyMarkets[i], u.maturities);
-            k++;
+        // 5) Create Rheo markets (one per legacy unpaused market), except on Base migrations.
+        if (u.createRheoMarkets) {
+            for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
+                targets[k] = address(u.sizeFactory);
+                datas[k] = _buildCreateMarketRheoCall(u.sizeFactory, u.legacyMarkets[i], u.maturities);
+                k++;
+            }
         }
 
-        // 5) For each borrow token group:
+        // 6) For each borrow token group:
         //    - approve+deposit underlying borrow token (mint vault shares),
         //    - shutdown+pause non-anchor markets,
         //    - shutdown anchor (without pause),
@@ -289,7 +297,7 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             }
         }
 
-        // 6) Remove legacy markets from SizeFactory (after shutdown/pause so borrowTokenVault transfers still work).
+        // 7) Remove legacy markets from SizeFactory (after shutdown/pause so borrowTokenVault transfers still work).
         for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
             targets[k] = address(u.sizeFactory);
             datas[k] = abi.encodeCall(SizeFactory.removeMarket, (address(u.legacyMarkets[i])));
@@ -367,6 +375,10 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00
         maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00
         maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00
+    }
+
+    function _shouldCreateRheoMarkets() internal view returns (bool) {
+        return block.chainid != BASE_MAINNET && block.chainid != BASE_SEPOLIA;
     }
 
     function _buildCreateMarketRheoCall(SizeFactory sizeFactory, ISize legacy, uint256[] memory maturities)

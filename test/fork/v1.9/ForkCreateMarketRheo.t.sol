@@ -117,15 +117,37 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         revert("WETH/* market not found");
     }
 
-    function _assertMigrationEffects(ISize[] memory legacyMarkets) internal view {
+    function _assertMigrationEffects(
+        ISize[] memory legacyMarkets,
+        uint256 initialMarketsCount,
+        bool expectRheoReplacement
+    ) internal view {
         // Legacy markets should be paused and removed from the factory registry.
         for (uint256 i = 0; i < legacyMarkets.length; i++) {
             assertTrue(PausableUpgradeable(address(legacyMarkets[i])).paused());
             assertFalse(factory.isMarket(address(legacyMarkets[i])));
         }
 
-        // New markets should replace the legacy set 1:1.
-        assertEq(factory.getMarketsCount(), legacyMarkets.length);
+        uint256 expectedMarketsCount =
+            expectRheoReplacement ? initialMarketsCount : initialMarketsCount - legacyMarkets.length;
+        assertEq(factory.getMarketsCount(), expectedMarketsCount);
+    }
+
+    function _assertNoCreateMarketRheoCalls(address[] memory targets, bytes[] memory datas) internal view {
+        for (uint256 i = 0; i < targets.length; i++) {
+            bool isCreateRheoCall =
+                targets[i] == address(factory) && _selector(datas[i]) == SizeFactory.createMarketRheo.selector;
+            assertFalse(isCreateRheoCall);
+        }
+    }
+
+    function _selector(bytes memory data) internal pure returns (bytes4 sel) {
+        if (data.length < 4) {
+            return bytes4(0);
+        }
+        assembly ("memory-safe") {
+            sel := mload(add(data, 0x20))
+        }
     }
 
     function _smokeRheoMarket(IRheo market) internal {
@@ -203,16 +225,30 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
 
     function _runForkMigrationAndSmoke() internal {
         ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
+        uint256 initialMarketsCount = factory.getMarketsCount();
         _fundGovernanceForFullShutdown(legacyMarkets);
 
         ProposeSafeTxUpgradeToV1_9Script script = new ProposeSafeTxUpgradeToV1_9Script();
         (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_9Data();
         _execAsOwner(targets, datas);
 
-        _assertMigrationEffects(legacyMarkets);
+        _assertMigrationEffects(legacyMarkets, initialMarketsCount, true);
 
         IRheo wethMarket = _findRheoMarketWethUsdc();
         _smokeRheoMarket(wethMarket);
+    }
+
+    function _runForkMigrationShutdownOnly() internal {
+        ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
+        uint256 initialMarketsCount = factory.getMarketsCount();
+        _fundGovernanceForFullShutdown(legacyMarkets);
+
+        ProposeSafeTxUpgradeToV1_9Script script = new ProposeSafeTxUpgradeToV1_9Script();
+        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_9Data();
+        _assertNoCreateMarketRheoCalls(targets, datas);
+        _execAsOwner(targets, datas);
+
+        _assertMigrationEffects(legacyMarkets, initialMarketsCount, false);
     }
 }
 
@@ -228,8 +264,8 @@ contract ForkUpgradeToV1_9BaseMainnetTest is ForkUpgradeToV1_9Base {
         _fork("base", FORK_BLOCK);
     }
 
-    function testFork_UpgradeToV1_9_baseMainnet_migrates_and_smokes() public {
-        _runForkMigrationAndSmoke();
+    function testFork_UpgradeToV1_9_baseMainnet_shutdowns_without_creating_markets() public {
+        _runForkMigrationShutdownOnly();
     }
 }
 
@@ -262,7 +298,7 @@ contract ForkUpgradeToV1_9BaseSepoliaTest is ForkUpgradeToV1_9Base {
         _fork("base_sepolia", FORK_BLOCK);
     }
 
-    function testFork_UpgradeToV1_9_baseSepolia_migrates_and_smokes() public {
-        _runForkMigrationAndSmoke();
+    function testFork_UpgradeToV1_9_baseSepolia_shutdowns_without_creating_markets() public {
+        _runForkMigrationShutdownOnly();
     }
 }
