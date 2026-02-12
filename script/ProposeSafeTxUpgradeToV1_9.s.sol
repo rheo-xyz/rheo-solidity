@@ -17,8 +17,6 @@ import {IMulticall} from "@src/market/interfaces/IMulticall.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 import {ISizeAdmin} from "@src/market/interfaces/ISizeAdmin.sol";
 
-import {ICollectionsManager} from "@src/collections/interfaces/ICollectionsManager.sol";
-
 import {DepositParams} from "@src/market/libraries/actions/Deposit.sol";
 
 import {
@@ -45,6 +43,8 @@ import {console} from "forge-std/console.sol";
 import {Safe} from "@safe-utils/Safe.sol";
 
 import {CollectionsManager as RheoCollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
+import {ICollectionsManager as ICollectionsManagerRheo} from
+    "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
 import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 
@@ -205,7 +205,7 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         // 3) Point factory to the new Rheo FM CollectionsManager.
         targets[k] = address(u.sizeFactory);
         datas[k] =
-            abi.encodeCall(SizeFactory.setCollectionsManager, (ICollectionsManager(u.newCollectionsManagerProxy)));
+            abi.encodeCall(SizeFactory.setCollectionsManager, (ICollectionsManagerRheo(u.newCollectionsManagerProxy)));
         k++;
 
         // 4) If needed, upgrade all legacy markets to latest Size implementation before shutdown.

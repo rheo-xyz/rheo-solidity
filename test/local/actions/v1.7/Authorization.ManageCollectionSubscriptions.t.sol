@@ -80,7 +80,10 @@ contract AuthorizationManageCollectionSubscriptionsTest is BaseTest {
         // Should not revert when authorized
         vm.prank(candy);
         sizeFactory.setUserCollectionCopyLimitOrderConfigsOnBehalfOf(
-            collectionId, copyLoanOfferConfig, copyBorrowOfferConfig, alice
+            collectionId,
+            _toRheoCopyLimitOrderConfig(copyLoanOfferConfig),
+            _toRheoCopyLimitOrderConfig(copyBorrowOfferConfig),
+            alice
         );
     }
 
@@ -109,7 +112,10 @@ contract AuthorizationManageCollectionSubscriptionsTest is BaseTest {
         );
         vm.prank(alice);
         sizeFactory.setUserCollectionCopyLimitOrderConfigsOnBehalfOf(
-            collectionId, copyLoanOfferConfig, copyBorrowOfferConfig, bob
+            collectionId,
+            _toRheoCopyLimitOrderConfig(copyLoanOfferConfig),
+            _toRheoCopyLimitOrderConfig(copyBorrowOfferConfig),
+            bob
         );
     }
 }
