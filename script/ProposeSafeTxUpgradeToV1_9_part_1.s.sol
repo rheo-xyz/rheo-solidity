@@ -43,9 +43,8 @@ import {console} from "forge-std/console.sol";
 import {Safe} from "@safe-utils/Safe.sol";
 
 import {CollectionsManager as RheoCollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
-import {
-    ICollectionsManager as ICollectionsManagerRheo
-} from "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
+import {ICollectionsManager as ICollectionsManagerRheo} from
+    "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
 import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 
@@ -294,7 +293,8 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
             }
         }
 
-        // 6) Remove legacy markets from the factory registry.
+        // 6) Remove legacy markets from SizeFactory/factory registry
+        //    (after shutdown/pause so borrowTokenVault transfers still work).
         for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
             targets[k] = address(u.sizeFactory);
             datas[k] = abi.encodeCall(SizeFactory.removeMarket, (address(u.legacyMarkets[i])));

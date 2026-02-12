@@ -71,7 +71,12 @@ contract ProposeSafeTxUpgradeToV1_9_part_2_Script is BaseScript, Networks {
             targets[k] = address(unpausedMarkets[i]);
             datas[k] = abi.encodeCall(
                 IRheoAdmin.updateConfig,
-                (UpdateConfigParamsRheo({key: OVERDUE_LIQUIDATION_REWARD_KEY, value: OVERDUE_LIQUIDATION_REWARD_PERCENT}))
+                (
+                    UpdateConfigParamsRheo({
+                        key: OVERDUE_LIQUIDATION_REWARD_KEY,
+                        value: OVERDUE_LIQUIDATION_REWARD_PERCENT
+                    })
+                )
             );
             k++;
         }
