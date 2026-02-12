@@ -177,7 +177,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         // - Upgrade factory + set impls + set collections manager.
         // - For each legacy market: create Rheo market + shutdown (and pause for non-anchor markets).
         // - For each group: withdraw (always), pause anchor, plus approve+deposit+approve(0) if depositing.
-        // - Legacy market removal is deferred to v1.9 part 2 (after overdue config copy).
+        // - Remove legacy markets from factory registry.
         uint256 totalCalls = 0;
         totalCalls += 1; // upgrade sizeFactory
         totalCalls += 1; // setRheoImplementation
@@ -191,7 +191,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         totalCalls += u.groups; // withdraw per group
         totalCalls += u.groups; // pause anchor per group
         totalCalls += u.depositGroups * 3; // approve + deposit + approve(0) for groups with non-zero balance
-        // removeMarket calls are handled in part 2.
+        totalCalls += u.legacyMarkets.length; // remove legacy markets
 
         targets = new address[](totalCalls);
         datas = new bytes[](totalCalls);
@@ -292,6 +292,13 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
                 datas[k] = abi.encodeCall(IERC20.approve, (address(anchor), 0));
                 k++;
             }
+        }
+
+        // 6) Remove legacy markets from the factory registry.
+        for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
+            targets[k] = address(u.sizeFactory);
+            datas[k] = abi.encodeCall(SizeFactory.removeMarket, (address(u.legacyMarkets[i])));
+            k++;
         }
 
         require(k == totalCalls, "invalid calls count");
