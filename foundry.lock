@@ -32,6 +32,9 @@
   "lib/properties": {
     "rev": "4a328b8d2637a48ac9f7cb74549cc93eb073d2ff"
   },
+  "lib/rheo-fm": {
+    "rev": "6f4accafd88ff0bdb09e40102f598a591cec56bb"
+  },
   "lib/safe-utils": {
     "tag": {
       "name": "v0.0.19",
