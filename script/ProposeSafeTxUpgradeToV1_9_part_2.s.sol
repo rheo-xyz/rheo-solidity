@@ -58,17 +58,17 @@ contract ProposeSafeTxUpgradeToV1_9_part_2_Script is BaseScript, Networks {
 
     function getUpgradeToV1_9Part2Data() public view returns (address[] memory targets, bytes[] memory datas) {
         SizeFactory sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory unpausedMarkets = getUnpausedMarkets(sizeFactory);
+        ISize[] memory unpausedRheoMarkets = getUnpausedRheoMarkets(sizeFactory);
 
-        require(unpausedMarkets.length > 0, "no unpaused markets found");
+        require(unpausedRheoMarkets.length > 0, "no unpaused markets found");
 
-        targets = new address[](unpausedMarkets.length);
-        datas = new bytes[](unpausedMarkets.length);
+        targets = new address[](unpausedRheoMarkets.length);
+        datas = new bytes[](unpausedRheoMarkets.length);
         uint256 k = 0;
 
         // Set overdueLiquidationRewardPercent = 0.01e18 for all currently unpaused markets.
-        for (uint256 i = 0; i < unpausedMarkets.length; i++) {
-            targets[k] = address(unpausedMarkets[i]);
+        for (uint256 i = 0; i < unpausedRheoMarkets.length; i++) {
+            targets[k] = address(unpausedRheoMarkets[i]);
             datas[k] = abi.encodeCall(
                 IRheoAdmin.updateConfig,
                 (

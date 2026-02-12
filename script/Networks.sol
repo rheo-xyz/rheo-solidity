@@ -538,6 +538,21 @@ abstract contract Networks {
         _unsafeSetLength(markets, j);
     }
 
+    function getUnpausedRheoMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
+        address[] memory marketAddresses = _sizeFactory.getMarkets();
+        bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
+        markets = new ISize[](marketAddresses.length);
+        uint256 j = 0;
+        for (uint256 i = 0; i < marketAddresses.length; i++) {
+            if (!PausableUpgradeable(marketAddresses[i]).paused()) {
+                if (!isFactoryV1_9 || _sizeFactory.isRheoMarket(marketAddresses[i])) {
+                    markets[j++] = ISize(marketAddresses[i]);
+                }
+            }
+        }
+        _unsafeSetLength(markets, j);
+    }
+
     function _isFactoryV1_9(ISizeFactory sizeFactory) internal view returns (bool) {
         bytes memory versionBytes = bytes(sizeFactory.version());
         return versionBytes.length >= 4 && versionBytes[0] == bytes1("v") && versionBytes[1] == bytes1("1")
