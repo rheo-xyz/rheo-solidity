@@ -25,17 +25,8 @@ import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/Sell
 import {DebtPosition, RESERVED_ID} from "@rheo-fm/src/market/libraries/LoanLibrary.sol";
 
 abstract contract ForkUpgradeToV1_9Base is Test, Networks {
-    uint256 internal constant SIZE_OVERDUE_LIQUIDATION_REWARD_SLOT = 30;
     uint256 internal constant RHEO_OVERDUE_LIQUIDATION_REWARD_SLOT = 29;
-
-    struct LegacyMarketOverdueConfig {
-        address legacyMarket;
-        address underlyingCollateralToken;
-        address underlyingBorrowToken;
-        address variablePool;
-        address borrowTokenVault;
-        uint256 overdueLiquidationRewardPercent;
-    }
+    uint256 internal constant OVERDUE_LIQUIDATION_REWARD_PERCENT = 0.01e18;
 
     address internal factoryOwner;
     SizeFactory internal factory;
@@ -130,65 +121,22 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         revert("WETH/* market not found");
     }
 
-    function _getLegacyMarketOverdueConfigs(ISize[] memory legacyMarkets)
-        internal
-        view
-        returns (LegacyMarketOverdueConfig[] memory legacyOverdueConfigs)
-    {
-        legacyOverdueConfigs = new LegacyMarketOverdueConfig[](legacyMarkets.length);
-        for (uint256 i = 0; i < legacyMarkets.length; i++) {
-            ISize legacy = legacyMarkets[i];
-            legacyOverdueConfigs[i] = LegacyMarketOverdueConfig({
-                legacyMarket: address(legacy),
-                underlyingCollateralToken: address(legacy.data().underlyingCollateralToken),
-                underlyingBorrowToken: address(legacy.data().underlyingBorrowToken),
-                variablePool: address(legacy.data().variablePool),
-                borrowTokenVault: address(legacy.data().borrowTokenVault),
-                overdueLiquidationRewardPercent: uint256(legacy.extSload(bytes32(SIZE_OVERDUE_LIQUIDATION_REWARD_SLOT)))
-            });
-        }
-    }
-
-    function _findRheoMarketForLegacyConfig(LegacyMarketOverdueConfig memory legacyConfig)
-        internal
-        view
-        returns (IRheo)
-    {
-        address[] memory markets = factory.getMarkets();
-        for (uint256 i = 0; i < markets.length; i++) {
-            address candidateAddress = markets[i];
-            if (!factory.isRheoMarket(candidateAddress)) {
-                continue;
-            }
-
-            IRheo candidate = IRheo(payable(candidateAddress));
-            if (
-                address(candidate.data().underlyingCollateralToken) == legacyConfig.underlyingCollateralToken
-                    && address(candidate.data().underlyingBorrowToken) == legacyConfig.underlyingBorrowToken
-                    && address(candidate.data().variablePool) == legacyConfig.variablePool
-                    && address(candidate.data().borrowTokenVault) == legacyConfig.borrowTokenVault
-            ) {
-                return candidate;
-            }
-        }
-
-        revert("matching Rheo market not found");
-    }
-
     function _overdueLiquidationRewardPercent(IRheo market) internal view returns (uint256) {
         return uint256(market.extSload(bytes32(RHEO_OVERDUE_LIQUIDATION_REWARD_SLOT)));
     }
 
-    function _assertOverdueLiquidationRewardsCopied(LegacyMarketOverdueConfig[] memory legacyOverdueConfigs)
-        internal
-        view
-    {
-        for (uint256 i = 0; i < legacyOverdueConfigs.length; i++) {
-            IRheo rheoMarket = _findRheoMarketForLegacyConfig(legacyOverdueConfigs[i]);
-            assertEq(
-                _overdueLiquidationRewardPercent(rheoMarket), legacyOverdueConfigs[i].overdueLiquidationRewardPercent
-            );
+    function _assertOverdueLiquidationRewardSetForUnpausedMarkets() internal view {
+        address[] memory markets = factory.getMarkets();
+        uint256 unpausedMarketsCount = 0;
+        for (uint256 i = 0; i < markets.length; i++) {
+            if (PausableUpgradeable(markets[i]).paused()) {
+                continue;
+            }
+            unpausedMarketsCount++;
+            assertTrue(factory.isRheoMarket(markets[i]));
+            assertEq(_overdueLiquidationRewardPercent(IRheo(payable(markets[i]))), OVERDUE_LIQUIDATION_REWARD_PERCENT);
         }
+        assertGt(unpausedMarketsCount, 0);
     }
 
     function _assertMigrationEffects(ISize[] memory legacyMarkets) internal view {
@@ -285,7 +233,6 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
 
     function _runForkMigrationAndSmoke() internal {
         ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
-        LegacyMarketOverdueConfig[] memory legacyOverdueConfigs = _getLegacyMarketOverdueConfigs(legacyMarkets);
         _fundGovernanceForFullShutdown(legacyMarkets);
 
         ProposeSafeTxUpgradeToV1_9_part_1_Script scriptPart1 = new ProposeSafeTxUpgradeToV1_9_part_1_Script();
@@ -300,7 +247,7 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         _execAsOwner(migrationTargetsPart2, migrationDatasPart2);
 
         _assertMigrationEffects(legacyMarkets);
-        _assertOverdueLiquidationRewardsCopied(legacyOverdueConfigs);
+        _assertOverdueLiquidationRewardSetForUnpausedMarkets();
 
         IRheo wethMarket = _findRheoMarketWethUsdc();
         _smokeRheoMarket(wethMarket);
