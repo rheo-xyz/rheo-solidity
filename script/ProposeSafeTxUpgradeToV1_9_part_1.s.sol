@@ -43,8 +43,9 @@ import {console} from "forge-std/console.sol";
 import {Safe} from "@safe-utils/Safe.sol";
 
 import {CollectionsManager as RheoCollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
-import {ICollectionsManager as ICollectionsManagerRheo} from
-    "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
+import {
+    ICollectionsManager as ICollectionsManagerRheo
+} from "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
 import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 
@@ -355,15 +356,25 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         revert("borrow token group not found");
     }
 
-    function _v1_9Maturities() internal pure returns (uint256[] memory maturities) {
-        // 1st of each month for 6 months, starting March 1st 2026 (UTC).
-        maturities = new uint256[](6);
-        maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00
-        maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00
-        maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00
-        maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00
-        maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00
-        maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00
+    function _v1_9Maturities() internal view returns (uint256[] memory maturities) {
+        if (block.chainid == BASE_SEPOLIA) {
+            // Testnet schedule.
+            maturities = new uint256[](6);
+            maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00
+            maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00
+            maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00
+            maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00
+            maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00
+            maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00
+            return maturities;
+        }
+
+        // Production schedule (non-testnet).
+        maturities = new uint256[](4);
+        maturities[0] = 1_774_598_400; // 2026-03-27 08:00:00
+        maturities[1] = 1_782_460_800; // 2026-06-26 08:00:00
+        maturities[2] = 1_790_323_200; // 2026-09-25 08:00:00
+        maturities[3] = 1_798_704_000; // 2026-12-31 08:00:00
     }
 
     function _buildCreateMarketRheoCall(SizeFactory sizeFactory, ISize legacy, uint256[] memory maturities)
