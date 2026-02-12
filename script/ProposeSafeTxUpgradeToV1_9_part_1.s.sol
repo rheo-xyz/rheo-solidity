@@ -11,6 +11,7 @@ import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata
 import {Contract, Networks} from "@script/Networks.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
+import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {Size} from "@src/market/Size.sol";
 
 import {IMulticall} from "@src/market/interfaces/IMulticall.sol";
@@ -45,7 +46,6 @@ import {Safe} from "@safe-utils/Safe.sol";
 import {CollectionsManager as RheoCollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
 import {ICollectionsManager as ICollectionsManagerRheo} from
     "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
-import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 
 contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
@@ -135,7 +135,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
             console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script: newCollectionsManagerImplementation", impl);
             u.newCollectionsManagerProxy = address(
                 new ERC1967Proxy(
-                    impl, abi.encodeCall(RheoCollectionsManager.initialize, (IRheoFactory(address(u.sizeFactory))))
+                    impl, abi.encodeCall(RheoCollectionsManager.initialize, (ISizeFactory(address(u.sizeFactory))))
                 )
             );
             console.log(
