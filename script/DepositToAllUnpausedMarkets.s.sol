@@ -25,7 +25,7 @@ contract DepositToAllUnpausedMarketsScript is BaseScript, Networks {
 
     function run() external broadcast {
         ISizeFactory sizeFactory = ISizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory unpausedMarkets = getUnpausedMarkets(sizeFactory);
+        ISize[] memory unpausedMarkets = getUnpausedSizeMarkets(sizeFactory);
         IERC20Metadata underlyingBorrowToken = IERC20Metadata(unpausedMarkets[0].data().underlyingBorrowToken);
         uint256 amount = 10 ** underlyingBorrowToken.decimals();
         uint256 unpausedMarketsLength = unpausedMarkets.length;

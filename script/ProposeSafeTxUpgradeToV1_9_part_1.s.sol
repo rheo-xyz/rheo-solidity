@@ -110,7 +110,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         u.owner = contracts[block.chainid][Contract.SIZE_GOVERNANCE];
 
         // Legacy markets we will migrate (unpaused only).
-        u.legacyMarkets = getUnpausedMarkets(u.sizeFactory);
+        u.legacyMarkets = getUnpausedSizeMarkets(u.sizeFactory);
         require(u.legacyMarkets.length > 0, "no unpaused markets found");
 
         // New implementations to be referenced by the upgrade tx.

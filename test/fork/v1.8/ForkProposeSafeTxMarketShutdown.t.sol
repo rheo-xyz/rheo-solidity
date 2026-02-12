@@ -54,7 +54,7 @@ contract ForkProposeSafeTxMarketShutdownTest is ForkTest, Networks {
 
         ISize[] memory marketsToShutdown = _getMarketsToShutdown(script);
 
-        ISize[] memory remainingMarkets = script.difference(getUnpausedMarkets(sizeFactory), marketsToShutdown);
+        ISize[] memory remainingMarkets = script.difference(getUnpausedSizeMarkets(sizeFactory), marketsToShutdown);
         ISize remainingMarket = remainingMarkets[0];
 
         _executeShutdown(

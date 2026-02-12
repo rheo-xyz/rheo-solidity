@@ -141,7 +141,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         view
         returns (ISize)
     {
-        return difference(getUnpausedMarkets(sizeFactory), marketsToShutdown)[0];
+        return difference(getUnpausedSizeMarkets(sizeFactory), marketsToShutdown)[0];
     }
 
     function _buildMarketShutdownAndOrPauseCall(GetMarketShutdownCalldataScript script, ISize market)

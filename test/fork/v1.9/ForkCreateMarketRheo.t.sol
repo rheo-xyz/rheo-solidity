@@ -241,7 +241,7 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
     }
 
     function _runForkMigrationAndSmoke() internal {
-        ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
+        ISize[] memory legacyMarkets = getUnpausedSizeMarkets(factory);
         _fundGovernanceForFullShutdown(legacyMarkets);
 
         ProposeSafeTxUpgradeToV1_9_part_1_Script scriptPart1 = new ProposeSafeTxUpgradeToV1_9_part_1_Script();

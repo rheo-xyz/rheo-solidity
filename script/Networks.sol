@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
@@ -522,7 +524,7 @@ abstract contract Networks {
         quoteToken = IERC20Metadata(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     }
 
-    function getUnpausedMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
+    function getUnpausedSizeMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
         address[] memory marketAddresses = _sizeFactory.getMarkets();
         bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
         markets = new ISize[](marketAddresses.length);
@@ -538,19 +540,19 @@ abstract contract Networks {
         _unsafeSetLength(markets, j);
     }
 
-    function getUnpausedRheoMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
+    function getUnpausedRheoMarkets(ISizeFactory _sizeFactory) public view returns (IRheo[] memory markets) {
         address[] memory marketAddresses = _sizeFactory.getMarkets();
         bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
-        markets = new ISize[](marketAddresses.length);
+        markets = new IRheo[](marketAddresses.length);
         uint256 j = 0;
         for (uint256 i = 0; i < marketAddresses.length; i++) {
             if (!PausableUpgradeable(marketAddresses[i]).paused()) {
                 if (!isFactoryV1_9 || _sizeFactory.isRheoMarket(marketAddresses[i])) {
-                    markets[j++] = ISize(marketAddresses[i]);
+                    markets[j++] = IRheo(payable(marketAddresses[i]));
                 }
             }
         }
-        _unsafeSetLength(markets, j);
+        _unsafeSetLengthRheo(markets, j);
     }
 
     function _isFactoryV1_9(ISizeFactory sizeFactory) internal view returns (bool) {
@@ -571,6 +573,12 @@ abstract contract Networks {
     }
 
     function _unsafeSetLength(ISize[] memory markets, uint256 length) internal pure {
+        assembly ("memory-safe") {
+            mstore(markets, length)
+        }
+    }
+
+    function _unsafeSetLengthRheo(IRheo[] memory markets, uint256 length) internal pure {
         assembly ("memory-safe") {
             mstore(markets, length)
         }

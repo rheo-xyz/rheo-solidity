@@ -7,8 +7,8 @@ import {BaseScript} from "@script/BaseScript.sol";
 import {Contract, Networks} from "@script/Networks.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
 
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 import {IRheoAdmin} from "@rheo-fm/src/market/interfaces/IRheoAdmin.sol";
 import {UpdateConfigParams as UpdateConfigParamsRheo} from "@rheo-fm/src/market/libraries/actions/UpdateConfig.sol";
 
@@ -58,7 +58,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_2_Script is BaseScript, Networks {
 
     function getUpgradeToV1_9Part2Data() public view returns (address[] memory targets, bytes[] memory datas) {
         SizeFactory sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
-        ISize[] memory unpausedRheoMarkets = getUnpausedRheoMarkets(sizeFactory);
+        IRheo[] memory unpausedRheoMarkets = getUnpausedRheoMarkets(sizeFactory);
 
         require(unpausedRheoMarkets.length > 0, "no unpaused markets found");
 
