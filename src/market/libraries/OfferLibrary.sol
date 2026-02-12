@@ -5,7 +5,6 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {UserCopyLimitOrderConfigs} from "@src/market/SizeStorage.sol";
 
 import {State} from "@src/market/SizeStorage.sol";
-import {ISize} from "@src/market/interfaces/ISize.sol";
 import {Errors} from "@src/market/libraries/Errors.sol";
 import {Math} from "@src/market/libraries/Math.sol";
 import {
@@ -161,7 +160,7 @@ library OfferLibrary {
         address rateProvider,
         uint256 tenor
     ) public view returns (uint256 apr) {
-        return state.data.sizeFactory.getLoanOfferAPR(user, collectionId, ISize(address(this)), rateProvider, tenor);
+        return state.data.sizeFactory.getLoanOfferAPR(user, collectionId, address(this), rateProvider, tenor);
     }
 
     /// @notice Get the absolute rate per tenor of a loan offer
@@ -196,7 +195,7 @@ library OfferLibrary {
         address rateProvider,
         uint256 tenor
     ) public view returns (uint256 apr) {
-        return state.data.sizeFactory.getBorrowOfferAPR(user, collectionId, ISize(address(this)), rateProvider, tenor);
+        return state.data.sizeFactory.getBorrowOfferAPR(user, collectionId, address(this), rateProvider, tenor);
     }
 
     /// @notice Get the absolute rate per tenor of a borrow offer
@@ -222,7 +221,7 @@ library OfferLibrary {
         view
         returns (bool)
     {
-        return state.data.sizeFactory.isBorrowAPRLowerThanLoanOfferAPRs(user, borrowAPR, ISize(address(this)), tenor);
+        return state.data.sizeFactory.isBorrowAPRLowerThanLoanOfferAPRs(user, borrowAPR, address(this), tenor);
     }
 
     function isLoanAPRGreaterThanBorrowOfferAPRs(State storage state, address user, uint256 loanAPR, uint256 tenor)
@@ -230,6 +229,6 @@ library OfferLibrary {
         view
         returns (bool)
     {
-        return state.data.sizeFactory.isLoanAPRGreaterThanBorrowOfferAPRs(user, loanAPR, ISize(address(this)), tenor);
+        return state.data.sizeFactory.isLoanAPRGreaterThanBorrowOfferAPRs(user, loanAPR, address(this), tenor);
     }
 }

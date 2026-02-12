@@ -70,6 +70,8 @@ import {MaliciousERC4626Reentrancy} from "@test/mocks/vaults/MaliciousERC4626Ree
 import {MaliciousERC4626ReentrancyGeneric} from "@test/mocks/vaults/MaliciousERC4626ReentrancyGeneric.sol";
 import {MaliciousERC4626WithdrawNotAllowed} from "@test/mocks/vaults/MaliciousERC4626WithdrawNotAllowed.sol";
 
+import {ICollectionsManager as ICollectionsManagerRheo} from
+    "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
 import {CollectionsManager} from "@src/collections/CollectionsManager.sol";
 
 abstract contract Deploy {
@@ -137,7 +139,7 @@ abstract contract Deploy {
                 )
             );
             hevm.prank(owner);
-            sizeFactory.setCollectionsManager(collectionsManager);
+            sizeFactory.setCollectionsManager(ICollectionsManagerRheo(address(collectionsManager)));
         }
 
         address borrowTokenVaultImplementation = address(new NonTransferrableRebasingTokenVaultGhost());
@@ -237,7 +239,7 @@ abstract contract Deploy {
                 )
             );
             hevm.prank(owner);
-            sizeFactory.setCollectionsManager(collectionsManager);
+            sizeFactory.setCollectionsManager(ICollectionsManagerRheo(address(collectionsManager)));
         }
 
         address borrowTokenVaultImplementation = address(new NonTransferrableRebasingTokenVaultGhost());

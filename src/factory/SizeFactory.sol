@@ -2,22 +2,16 @@
 pragma solidity 0.8.23;
 
 import {IPool} from "@aave/interfaces/IPool.sol";
-import {ERC721EnumerableUpgradeable} from
-    "@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol";
 
 import {MulticallUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/MulticallUpgradeable.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {CopyLimitOrderConfig} from "@src/market/libraries/OfferLibrary.sol";
 
-import {ICollectionsManager} from "@src/collections/interfaces/ICollectionsManager.sol";
-import {YieldCurve} from "@src/market/libraries/YieldCurveLibrary.sol";
-import {BuyCreditLimitOnBehalfOfParams, BuyCreditLimitParams} from "@src/market/libraries/actions/BuyCreditLimit.sol";
-import {
-    SellCreditLimitOnBehalfOfParams, SellCreditLimitParams
-} from "@src/market/libraries/actions/SellCreditLimit.sol";
+import {ICollectionsManager as ICollectionsManagerRheo} from
+    "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
+import {CopyLimitOrderConfig} from "@rheo-fm/src/market/libraries/OfferLibrary.sol";
 
-import {Math, PERCENT} from "@src/market/libraries/Math.sol";
 import {
     InitializeDataParams,
     InitializeFeeConfigParams,
@@ -34,11 +28,11 @@ import {
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 import {Errors} from "@src/market/libraries/Errors.sol";
 
+import {ICollectionsManager as ICollectionsManagerSize} from "@src/collections/interfaces/ICollectionsManager.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
@@ -51,8 +45,6 @@ import {NonTransferrableRebasingTokenVaultLibrary} from
 import {PriceFeedFactoryLibrary} from "@src/factory/libraries/PriceFeedFactoryLibrary.sol";
 import {NonTransferrableRebasingTokenVault} from "@src/market/token/NonTransferrableRebasingTokenVault.sol";
 
-import {IPriceFeedV1_5_2} from "@src/oracle/v1.5.2/IPriceFeedV1_5_2.sol";
-
 import {PriceFeed, PriceFeedParams} from "@src/oracle/v1.5.1/PriceFeed.sol";
 
 import {SizeFactoryEvents} from "@src/factory/SizeFactoryEvents.sol";
@@ -61,11 +53,6 @@ import {Action, ActionsBitmap, Authorization} from "@src/factory/libraries/Autho
 
 import {ISizeFactoryV1_7} from "@src/factory/interfaces/ISizeFactoryV1_7.sol";
 import {ISizeFactoryV1_8} from "@src/factory/interfaces/ISizeFactoryV1_8.sol";
-
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-
-import {ERC721Holder} from "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-import {CollectionsManager} from "@src/collections/CollectionsManager.sol";
 
 import {BORROW_RATE_UPDATER_ROLE, KEEPER_ROLE, PAUSER_ROLE} from "@src/factory/interfaces/ISizeFactory.sol";
 
@@ -134,9 +121,9 @@ contract SizeFactory is
         nonTransferrableTokenVaultImplementation = _nonTransferrableTokenVaultImplementation;
     }
 
-    function setCollectionsManager(ICollectionsManager _collectionsManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setCollectionsManager(ICollectionsManagerRheo _collectionsManager) external onlyRole(DEFAULT_ADMIN_ROLE) {
         emit CollectionsManagerSet(address(collectionsManager), address(_collectionsManager));
-        collectionsManager = _collectionsManager;
+        collectionsManager = ICollectionsManagerSize(address(_collectionsManager));
     }
 
     /// @inheritdoc ISizeFactory
@@ -276,7 +263,7 @@ contract SizeFactory is
         if (!isAuthorized(msg.sender, onBehalfOf, Action.MANAGE_COLLECTION_SUBSCRIPTIONS)) {
             revert Errors.UNAUTHORIZED_ACTION(msg.sender, onBehalfOf, uint8(Action.MANAGE_COLLECTION_SUBSCRIPTIONS));
         }
-        collectionsManager.subscribeUserToCollections(onBehalfOf, collectionIds);
+        ICollectionsManagerRheo(address(collectionsManager)).subscribeUserToCollections(onBehalfOf, collectionIds);
     }
 
     /// @inheritdoc ISizeFactoryV1_8
@@ -284,7 +271,7 @@ contract SizeFactory is
         if (!isAuthorized(msg.sender, onBehalfOf, Action.MANAGE_COLLECTION_SUBSCRIPTIONS)) {
             revert Errors.UNAUTHORIZED_ACTION(msg.sender, onBehalfOf, uint8(Action.MANAGE_COLLECTION_SUBSCRIPTIONS));
         }
-        collectionsManager.unsubscribeUserFromCollections(onBehalfOf, collectionIds);
+        ICollectionsManagerRheo(address(collectionsManager)).unsubscribeUserFromCollections(onBehalfOf, collectionIds);
     }
 
     function setUserCollectionCopyLimitOrderConfigs(
@@ -306,42 +293,50 @@ contract SizeFactory is
         if (!isAuthorized(msg.sender, onBehalfOf, Action.MANAGE_COLLECTION_SUBSCRIPTIONS)) {
             revert Errors.UNAUTHORIZED_ACTION(msg.sender, onBehalfOf, uint8(Action.MANAGE_COLLECTION_SUBSCRIPTIONS));
         }
-        collectionsManager.setUserCollectionCopyLimitOrderConfigs(
+        ICollectionsManagerRheo(address(collectionsManager)).setUserCollectionCopyLimitOrderConfigs(
             onBehalfOf, collectionId, copyLoanOfferConfig, copyBorrowOfferConfig
         );
     }
 
     /// @inheritdoc ISizeFactoryV1_8
-    function getLoanOfferAPR(address user, uint256 collectionId, ISize market, address rateProvider, uint256 tenor)
+    function getLoanOfferAPR(address user, uint256 collectionId, address market, address rateProvider, uint256 tenor)
         external
         view
         returns (uint256)
     {
-        return collectionsManager.getLoanOfferAPR(user, collectionId, market, rateProvider, tenor);
+        return ICollectionsManagerRheo(address(collectionsManager)).getLoanOfferAPR(
+            user, collectionId, IRheo(market), rateProvider, tenor
+        );
     }
 
     /// @inheritdoc ISizeFactoryV1_8
-    function getBorrowOfferAPR(address user, uint256 collectionId, ISize market, address rateProvider, uint256 tenor)
+    function getBorrowOfferAPR(address user, uint256 collectionId, address market, address rateProvider, uint256 tenor)
         external
         view
         returns (uint256)
     {
-        return collectionsManager.getBorrowOfferAPR(user, collectionId, market, rateProvider, tenor);
+        return ICollectionsManagerRheo(address(collectionsManager)).getBorrowOfferAPR(
+            user, collectionId, IRheo(market), rateProvider, tenor
+        );
     }
 
-    function isBorrowAPRLowerThanLoanOfferAPRs(address user, uint256 borrowAPR, ISize market, uint256 tenor)
+    function isBorrowAPRLowerThanLoanOfferAPRs(address user, uint256 borrowAPR, address market, uint256 tenor)
         external
         view
         returns (bool)
     {
-        return collectionsManager.isBorrowAPRLowerThanLoanOfferAPRs(user, borrowAPR, market, tenor);
+        return ICollectionsManagerRheo(address(collectionsManager)).isBorrowAPRLowerThanLoanOfferAPRs(
+            user, borrowAPR, IRheo(market), tenor
+        );
     }
 
-    function isLoanAPRGreaterThanBorrowOfferAPRs(address user, uint256 loanAPR, ISize market, uint256 tenor)
+    function isLoanAPRGreaterThanBorrowOfferAPRs(address user, uint256 loanAPR, address market, uint256 tenor)
         external
         view
         returns (bool)
     {
-        return collectionsManager.isLoanAPRGreaterThanBorrowOfferAPRs(user, loanAPR, market, tenor);
+        return ICollectionsManagerRheo(address(collectionsManager)).isLoanAPRGreaterThanBorrowOfferAPRs(
+            user, loanAPR, IRheo(market), tenor
+        );
     }
 }

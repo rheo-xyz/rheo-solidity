@@ -44,6 +44,7 @@ import {BuyCreditMarketParams} from "@src/market/libraries/actions/BuyCreditMark
 import {SetUserConfigurationParams} from "@src/market/libraries/actions/SetUserConfiguration.sol";
 import {SetVaultParams} from "@src/market/libraries/actions/SetVault.sol";
 
+import {CopyLimitOrderConfig as CopyLimitOrderConfigRheo} from "@rheo-fm/src/market/libraries/OfferLibrary.sol";
 import {KEEPER_ROLE} from "@src/factory/SizeFactory.sol";
 import {UserView} from "@src/market/SizeView.sol";
 import {CopyLimitOrderConfig} from "@src/market/libraries/OfferLibrary.sol";
@@ -521,8 +522,26 @@ contract BaseTest is Test, Deploy, AssertsHelper {
         CopyLimitOrderConfig memory copyLoanOfferConfig,
         CopyLimitOrderConfig memory copyBorrowOfferConfig
     ) internal {
+        CopyLimitOrderConfigRheo memory copyLoanOfferConfigRheo = _toRheoCopyLimitOrderConfig(copyLoanOfferConfig);
+        CopyLimitOrderConfigRheo memory copyBorrowOfferConfigRheo = _toRheoCopyLimitOrderConfig(copyBorrowOfferConfig);
         vm.prank(user);
-        sizeFactory.setUserCollectionCopyLimitOrderConfigs(collectionId, copyLoanOfferConfig, copyBorrowOfferConfig);
+        sizeFactory.setUserCollectionCopyLimitOrderConfigs(
+            collectionId, copyLoanOfferConfigRheo, copyBorrowOfferConfigRheo
+        );
+    }
+
+    function _toRheoCopyLimitOrderConfig(CopyLimitOrderConfig memory copyLimitOrderConfig)
+        internal
+        pure
+        returns (CopyLimitOrderConfigRheo memory)
+    {
+        return CopyLimitOrderConfigRheo({
+            minTenor: copyLimitOrderConfig.minTenor,
+            maxTenor: copyLimitOrderConfig.maxTenor,
+            minAPR: copyLimitOrderConfig.minAPR,
+            maxAPR: copyLimitOrderConfig.maxAPR,
+            offsetAPR: copyLimitOrderConfig.offsetAPR
+        });
     }
 
     function _setAuthorization(address user, address operator, ActionsBitmap actionsBitmap) internal {
