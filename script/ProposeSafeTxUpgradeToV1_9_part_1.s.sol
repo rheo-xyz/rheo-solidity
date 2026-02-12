@@ -170,7 +170,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
             }
         }
 
-        u.maturities = _v1_9Maturities();
+        u.maturities = v1_9Maturities();
 
         // Count calls (roughly):
         // - Upgrade factory + set impls + set collections manager.
@@ -363,7 +363,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         revert("borrow token group not found");
     }
 
-    function _v1_9Maturities() internal view returns (uint256[] memory maturities) {
+    function v1_9Maturities() public view returns (uint256[] memory maturities) {
         if (block.chainid == BASE_SEPOLIA) {
             // Testnet schedule.
             maturities = new uint256[](6);
