@@ -224,10 +224,10 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
     }
 
     function _assertPart1Effects(ISize[] memory legacyMarkets) internal view {
-        // After part 1, legacy markets should be paused but still registered in the factory.
+        // After part 1, legacy markets should be paused and removed from the factory registry.
         for (uint256 i = 0; i < legacyMarkets.length; i++) {
             assertTrue(PausableUpgradeable(address(legacyMarkets[i])).paused());
-            assertTrue(factory.isMarket(address(legacyMarkets[i])));
+            assertFalse(factory.isMarket(address(legacyMarkets[i])));
         }
     }
 
