@@ -50,6 +50,10 @@ abstract contract Networks {
 
     mapping(uint256 => mapping(Contract => address)) public contracts;
 
+    function _isTestnet(uint256 chainId) internal pure returns (bool) {
+        return chainId == BASE_SEPOLIA;
+    }
+
     constructor() {
         contracts[ETHEREUM_MAINNET][Contract.WETH] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
         contracts[BASE_MAINNET][Contract.WETH] = 0x4200000000000000000000000000000000000006;

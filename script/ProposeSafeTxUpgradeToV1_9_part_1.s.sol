@@ -71,13 +71,13 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
 
     address signer;
     string derivationPath;
-    bool skipPropose;
+    bool isTestnet;
 
     modifier parseEnv() {
-        // Base Sepolia uses an EOA admin (no multisig). When SKIP_PROPOSE=true we execute the calls directly.
-        skipPropose = vm.envOr("SKIP_PROPOSE", false);
+        // Testnets use an EOA admin flow (no multisig), mainnets use Safe proposals.
+        isTestnet = _isTestnet(block.chainid);
 
-        if (!skipPropose) {
+        if (!isTestnet) {
             safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
             signer = vm.envAddress("SIGNER");
             derivationPath = vm.envString("LEDGER_PATH");
@@ -93,7 +93,7 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         vm.startBroadcast();
         (address[] memory targets, bytes[] memory datas) = getUpgradeToV1_9Part1Data();
 
-        if (skipPropose) {
+        if (isTestnet) {
             // Execute the calls directly (EOA admin flow).
             _execute(targets, datas);
             vm.stopBroadcast();
