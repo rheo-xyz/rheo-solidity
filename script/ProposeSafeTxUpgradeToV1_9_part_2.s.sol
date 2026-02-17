@@ -32,8 +32,10 @@ contract ProposeSafeTxUpgradeToV1_9_part_2_Script is BaseScript, Networks {
 
         if (!isTestnet) {
             safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
-            signer = vm.envAddress("SIGNER");
-            derivationPath = vm.envString("LEDGER_PATH");
+            if (!vm.envOr("SKIP_PROPOSE", false)) {
+                signer = vm.envAddress("SIGNER");
+                derivationPath = vm.envString("LEDGER_PATH");
+            }
         }
 
         _;
@@ -45,12 +47,24 @@ contract ProposeSafeTxUpgradeToV1_9_part_2_Script is BaseScript, Networks {
         vm.startBroadcast();
         (address[] memory targets, bytes[] memory datas) = getUpgradeToV1_9Part2Data();
 
+        // Log targets and raw calldatas for manual Safe transaction builder
+        console.log("--- Safe transaction data (for manual GUI entry) ---");
+        for (uint256 i = 0; i < targets.length; i++) {
+            console.log("Tx", i, "- Target:", targets[i]);
+            console.logBytes(datas[i]);
+        }
+        console.log("---");
+
         if (isTestnet) {
             _execute(targets, datas);
             vm.stopBroadcast();
         } else {
             vm.stopBroadcast();
-            safe.proposeTransactions(targets, datas, signer, derivationPath);
+            if (!vm.envOr("SKIP_PROPOSE", false)) {
+                safe.proposeTransactions(targets, datas, signer, derivationPath);
+            } else {
+                console.log("Skipping proposeTransactions (SKIP_PROPOSE=1)");
+            }
         }
 
         console.log("ProposeSafeTxUpgradeToV1_9_part_2_Script: done");
