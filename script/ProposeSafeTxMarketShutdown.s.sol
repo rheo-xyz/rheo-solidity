@@ -9,6 +9,8 @@ import {BaseScript} from "@script/BaseScript.sol";
 import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata.s.sol";
 import {Contract, Networks} from "@script/Networks.sol";
 
+import {console} from "forge-std/console.sol";
+
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 
 import {DataView} from "@src/market/SizeViewData.sol";
@@ -32,15 +34,29 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
     modifier parseEnv() {
         safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
-        signer = vm.envAddress("SIGNER");
-        derivationPath = vm.envString("LEDGER_PATH");
+        if (!vm.envOr("SKIP_PROPOSE", false)) {
+            signer = vm.envAddress("SIGNER");
+            derivationPath = vm.envString("LEDGER_PATH");
+        }
         _;
     }
 
     function run() external parseEnv {
         (address[] memory targets, bytes[] memory datas) = getMarketShutdownData();
 
-        safe.proposeTransactions(targets, datas, signer, derivationPath);
+        // Log targets and raw calldatas for manual Safe transaction builder
+        console.log("--- Safe transaction data (for manual GUI entry) ---");
+        for (uint256 i = 0; i < targets.length; i++) {
+            console.log("Tx", i, "- Target:", targets[i]);
+            console.logBytes(datas[i]);
+        }
+        console.log("---");
+
+        if (!vm.envOr("SKIP_PROPOSE", false)) {
+            safe.proposeTransactions(targets, datas, signer, derivationPath);
+        } else {
+            console.log("Skipping proposeTransactions (SKIP_PROPOSE=1)");
+        }
     }
 
     function getMarketShutdownData() public returns (address[] memory targets, bytes[] memory datas) {
