@@ -30,7 +30,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
     string derivationPath;
 
     string[] public collateralMarketsToShutdownMainnet = ["PT-wstUSR-29JAN2026", "WBTC", "weETH", "cbETH"];
-    string[] public collateralMarketsToShutdownBase = ["VIRTUAL", "cbETH"];
+    string[] public collateralMarketsToShutdownBase = ["WETH", "cbBTC"];
 
     modifier parseEnv() {
         safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
@@ -67,7 +67,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         IERC20Metadata underlyingBorrowToken = remainingMarket.data().underlyingBorrowToken;
         uint256 depositAmount = underlyingBorrowToken.balanceOf(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
 
-        uint256 totalCalls = marketsToShutdown.length + 2 + (depositAmount > 0 ? 3 : 0);
+        uint256 totalCalls = marketsToShutdown.length + 4 + (depositAmount > 0 ? 3 : 0);
         targets = new address[](totalCalls);
         datas = new bytes[](totalCalls);
 
@@ -121,6 +121,14 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
             datas[index] = abi.encodeCall(IERC20.approve, (address(remainingMarket), 0));
             index++;
         }
+
+        targets[index] = address(remainingMarket);
+        datas[index] = _buildMarketShutdownAndOrPauseCall(getMarketShutdownCalldataScript, remainingMarket);
+        index++;
+
+        targets[index] = address(sizeFactory);
+        datas[index] = abi.encodeCall(ISizeFactory.removeMarket, (address(remainingMarket)));
+        index++;
 
         require(index == totalCalls, "invalid index");
     }
