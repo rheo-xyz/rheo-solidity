@@ -26,6 +26,13 @@ import {WithdrawParams} from "@src/market/libraries/actions/Withdraw.sol";
 contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
     using Safe for *;
 
+    struct ShutdownPlan {
+        bytes[] batchShutdownCalls;
+        bytes remainingShutdownCall;
+        bool isRemainingEmpty;
+        uint256 depositAmount;
+    }
+
     address signer;
     string derivationPath;
 
@@ -59,24 +66,51 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         }
     }
 
+    function _buildShutdownPlan(ISize[] memory marketsToShutdown, ISize remainingMarket)
+        internal
+        returns (ShutdownPlan memory plan)
+    {
+        GetMarketShutdownCalldataScript script = new GetMarketShutdownCalldataScript();
+
+        plan.batchShutdownCalls = new bytes[](marketsToShutdown.length);
+        uint256 totalFutureValue = 0;
+        for (uint256 i = 0; i < marketsToShutdown.length; i++) {
+            plan.batchShutdownCalls[i] = _buildMarketShutdownAndOrPauseCall(script, marketsToShutdown[i]);
+            totalFutureValue += script.getSumFutureValue(marketsToShutdown[i]);
+        }
+
+        DataView memory remainingDataView = ISizeView(address(remainingMarket)).data();
+        plan.isRemainingEmpty =
+            remainingDataView.debtToken.totalSupply() == 0 && remainingDataView.collateralToken.totalSupply() == 0;
+
+        if (!plan.isRemainingEmpty) {
+            MarketShutdownParams memory remainingParams = script.collectPositions(remainingMarket);
+            totalFutureValue += script.getSumFutureValue(remainingMarket);
+            plan.remainingShutdownCall = abi.encodeCall(ISizeAdmin.marketShutdown, (remainingParams));
+        }
+
+        plan.depositAmount = totalFutureValue;
+        console.log("Total futureValue (deposit needed):", plan.depositAmount);
+    }
+
     function getMarketShutdownData() public returns (address[] memory targets, bytes[] memory datas) {
         ISizeFactory sizeFactory = ISizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
         ISize[] memory marketsToShutdown = _getMarketsToShutdown(sizeFactory);
         ISize remainingMarket = _getRemainingMarket(sizeFactory, marketsToShutdown);
-
         IERC20Metadata underlyingBorrowToken = remainingMarket.data().underlyingBorrowToken;
-        uint256 depositAmount = underlyingBorrowToken.balanceOf(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
 
-        uint256 totalCalls = marketsToShutdown.length + 4 + (depositAmount > 0 ? 3 : 0);
+        ShutdownPlan memory plan = _buildShutdownPlan(marketsToShutdown, remainingMarket);
+
+        uint256 totalCalls = marketsToShutdown.length + (plan.isRemainingEmpty ? 0 : 1) + 4
+            + (plan.depositAmount > 0 ? 3 : 0);
         targets = new address[](totalCalls);
         datas = new bytes[](totalCalls);
-
         uint256 index = 0;
-        GetMarketShutdownCalldataScript getMarketShutdownCalldataScript = new GetMarketShutdownCalldataScript();
 
-        if (depositAmount > 0) {
+        // 1. Approve + Deposit totalFutureValue into remaining market (shared borrowTokenVault)
+        if (plan.depositAmount > 0) {
             targets[index] = address(underlyingBorrowToken);
-            datas[index] = abi.encodeCall(IERC20.approve, (address(remainingMarket), depositAmount));
+            datas[index] = abi.encodeCall(IERC20.approve, (address(remainingMarket), plan.depositAmount));
             index++;
 
             targets[index] = address(remainingMarket);
@@ -85,7 +119,7 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
                 (
                     DepositParams({
                         token: address(underlyingBorrowToken),
-                        amount: depositAmount,
+                        amount: plan.depositAmount,
                         to: contracts[block.chainid][Contract.SIZE_GOVERNANCE]
                     })
                 )
@@ -93,8 +127,21 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
             index++;
         }
 
-        index = _appendMarketShutdownCalls(getMarketShutdownCalldataScript, marketsToShutdown, targets, datas, index);
+        // 2. Shutdown+pause batch markets
+        for (uint256 i = 0; i < marketsToShutdown.length; i++) {
+            targets[index] = address(marketsToShutdown[i]);
+            datas[index] = plan.batchShutdownCalls[i];
+            index++;
+        }
 
+        // 3. MarketShutdown remaining (no pause yet, so we can still withdraw)
+        if (!plan.isRemainingEmpty) {
+            targets[index] = address(remainingMarket);
+            datas[index] = plan.remainingShutdownCall;
+            index++;
+        }
+
+        // 4. Withdraw from remaining market (still unpaused)
         targets[index] = address(remainingMarket);
         datas[index] = abi.encodeCall(
             ISize.withdraw,
@@ -108,6 +155,12 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         );
         index++;
 
+        // 5. Pause remaining market
+        targets[index] = address(remainingMarket);
+        datas[index] = abi.encodeCall(ISizeAdmin.pause, ());
+        index++;
+
+        // 6. Remove batch markets
         bytes[] memory removeMarketData = new bytes[](marketsToShutdown.length);
         for (uint256 i = 0; i < marketsToShutdown.length; i++) {
             removeMarketData[i] = abi.encodeCall(ISizeFactory.removeMarket, (address(marketsToShutdown[i])));
@@ -116,37 +169,19 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
         datas[index] = abi.encodeCall(IMulticall.multicall, (removeMarketData));
         index++;
 
-        if (depositAmount > 0) {
+        // 7. Remove remaining market
+        targets[index] = address(sizeFactory);
+        datas[index] = abi.encodeCall(ISizeFactory.removeMarket, (address(remainingMarket)));
+        index++;
+
+        // 8. Revoke approval
+        if (plan.depositAmount > 0) {
             targets[index] = address(underlyingBorrowToken);
             datas[index] = abi.encodeCall(IERC20.approve, (address(remainingMarket), 0));
             index++;
         }
 
-        targets[index] = address(remainingMarket);
-        datas[index] = _buildMarketShutdownAndOrPauseCall(getMarketShutdownCalldataScript, remainingMarket);
-        index++;
-
-        targets[index] = address(sizeFactory);
-        datas[index] = abi.encodeCall(ISizeFactory.removeMarket, (address(remainingMarket)));
-        index++;
-
         require(index == totalCalls, "invalid index");
-    }
-
-    function _appendMarketShutdownCalls(
-        GetMarketShutdownCalldataScript script,
-        ISize[] memory marketsToShutdown,
-        address[] memory targets,
-        bytes[] memory datas,
-        uint256 index
-    ) internal returns (uint256) {
-        for (uint256 i = 0; i < marketsToShutdown.length; i++) {
-            ISize market = marketsToShutdown[i];
-            targets[index] = address(market);
-            datas[index] = _buildMarketShutdownAndOrPauseCall(script, market);
-            index++;
-        }
-        return index;
     }
 
     function _getMarketsToShutdown(ISizeFactory sizeFactory) internal view returns (ISize[] memory marketsToShutdown) {
