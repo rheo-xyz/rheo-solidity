@@ -123,8 +123,13 @@ jobs:
         run: |
           forge clean
           forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
-          if [ -f lib/ERC-7540-Reference/src/BaseERC7540.sol ] && [ ! -f src/BaseERC7540.sol ]; then
-            ln -s ../lib/ERC-7540-Reference/src/BaseERC7540.sol src/BaseERC7540.sol
+          if [ -d lib/ERC-7540-Reference/src ]; then
+            for file in lib/ERC-7540-Reference/src/*.sol; do
+              name="$(basename "$file")"
+              if [ ! -e "src/$name" ]; then
+                ln -s "../$file" "src/$name"
+              fi
+            done
           fi
 
       - name: Run Slither
