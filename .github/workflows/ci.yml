@@ -124,12 +124,15 @@ jobs:
           forge clean
           forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
           if [ -d lib/ERC-7540-Reference/src ]; then
-            for file in lib/ERC-7540-Reference/src/*.sol; do
-              name="$(basename "$file")"
-              if [ ! -e "src/$name" ]; then
-                ln -s "../$file" "src/$name"
+            while IFS= read -r file; do
+              rel="${file#lib/ERC-7540-Reference/src/}"
+              target="src/$rel"
+              mkdir -p "$(dirname "$target")"
+              if [ ! -e "$target" ]; then
+                link="$(realpath --relative-to="$(dirname "$target")" "$file")"
+                ln -s "$link" "$target"
               fi
-            done
+            done < <(find lib/ERC-7540-Reference/src -type f -name '*.sol')
           fi
 
       - name: Run Slither
