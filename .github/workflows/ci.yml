@@ -118,6 +118,15 @@ jobs:
         with:
           version: v1.3.5
 
+      - name: Prebuild for Slither
+        shell: bash
+        run: |
+          forge clean
+          forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
+          if [ -f lib/ERC-7540-Reference/src/BaseERC7540.sol ] && [ ! -f src/BaseERC7540.sol ]; then
+            ln -s ../lib/ERC-7540-Reference/src/BaseERC7540.sol src/BaseERC7540.sol
+          fi
+
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
         id: slither
@@ -125,6 +134,7 @@ jobs:
           fail-on: low
           solc-version: 0.8.23
           slither-args: --exclude-dependencies
+          ignore-compile: true
           target: src
 
 
