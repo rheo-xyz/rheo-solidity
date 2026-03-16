@@ -94,6 +94,7 @@ abstract contract Deploy {
     CollectionsManager internal collectionsManager;
 
     bool internal shouldDeploySizeFactory = true;
+    bool internal reducedDeploymentForInvariantFuzzing;
 
     IERC4626 internal vaultSolady;
     IERC4626 internal vaultOpenZeppelin;
@@ -315,6 +316,9 @@ abstract contract Deploy {
     function _deployVaults() internal {
         vaultSolady = IERC4626(address(new ERC4626Solady(address(usdc), "VaultSolady", "VAULTSOLADY", true, 0)));
         vaultOpenZeppelin = IERC4626(address(new ERC4626OpenZeppelin(address(usdc))));
+        if (reducedDeploymentForInvariantFuzzing) {
+            return;
+        }
         vaultSolmate =
             IERC4626(address(new ERC4626Solmate(ERC20Solmate(address(usdc)), "VaultSolmate", "VAULTSOLMATE")));
         vaultMaliciousWithdrawNotAllowed = IERC4626(
