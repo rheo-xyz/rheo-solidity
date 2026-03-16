@@ -118,13 +118,120 @@ jobs:
         with:
           version: v1.3.5
 
+      - name: Remove rheo-fm for Slither
+        run: rm -rf lib/rheo-fm
+
+      - name: Stub rheo-fm for Slither
+        shell: bash
+        run: |
+          mkdir -p .slither-stubs/rheo-fm/src/collections/interfaces
+          mkdir -p .slither-stubs/rheo-fm/src/market/interfaces
+          mkdir -p .slither-stubs/rheo-fm/src/market/libraries
+          mkdir -p .slither-stubs/rheo-fm/src/market/libraries/actions
+
+          cat <<'EOF' > .slither-stubs/rheo-fm/src/market/interfaces/IRheo.sol
+          // SPDX-License-Identifier: MIT
+          pragma solidity 0.8.23;
+
+          string constant VERSION = "slither-stub";
+
+          interface IRheo {}
+          EOF
+
+          cat <<'EOF' > .slither-stubs/rheo-fm/src/market/libraries/OfferLibrary.sol
+          // SPDX-License-Identifier: MIT
+          pragma solidity 0.8.23;
+
+          struct CopyLimitOrderConfig {
+              bool placeholder;
+          }
+          EOF
+
+          cat <<'EOF' > .slither-stubs/rheo-fm/src/market/libraries/actions/Initialize.sol
+          // SPDX-License-Identifier: MIT
+          pragma solidity 0.8.23;
+
+          struct InitializeFeeConfigParams {
+              bool placeholder;
+          }
+          struct InitializeRiskConfigParams {
+              bool placeholder;
+          }
+          struct InitializeOracleParams {
+              bool placeholder;
+          }
+          struct InitializeDataParams {
+              bool placeholder;
+          }
+          EOF
+
+          cat <<'EOF' > .slither-stubs/rheo-fm/src/collections/interfaces/ICollectionsManager.sol
+          // SPDX-License-Identifier: MIT
+          pragma solidity 0.8.23;
+
+          import {IRheo} from "../../market/interfaces/IRheo.sol";
+          import {CopyLimitOrderConfig} from "../../market/libraries/OfferLibrary.sol";
+
+          interface ICollectionsManager {
+              function subscribeUserToCollections(address user, uint256[] memory collectionIds) external;
+              function unsubscribeUserFromCollections(address user, uint256[] memory collectionIds) external;
+              function setUserCollectionCopyLimitOrderConfigs(
+                  address user,
+                  uint256 collectionId,
+                  CopyLimitOrderConfig memory copyLoanOfferConfig,
+                  CopyLimitOrderConfig memory copyBorrowOfferConfig
+              ) external;
+              function getLoanOfferAPR(
+                  address user,
+                  uint256 collectionId,
+                  IRheo market,
+                  address rateProvider,
+                  uint256 tenor
+              ) external view returns (uint256);
+              function getBorrowOfferAPR(
+                  address user,
+                  uint256 collectionId,
+                  IRheo market,
+                  address rateProvider,
+                  uint256 tenor
+              ) external view returns (uint256);
+              function isBorrowAPRLowerThanLoanOfferAPRs(
+                  address user,
+                  uint256 borrowAPR,
+                  IRheo market,
+                  uint256 tenor
+              ) external view returns (bool);
+              function isLoanAPRGreaterThanBorrowOfferAPRs(
+                  address user,
+                  uint256 loanAPR,
+                  IRheo market,
+                  uint256 tenor
+              ) external view returns (bool);
+          }
+          EOF
+
+          cp remappings.txt remappings.txt.bak
+          python3 - <<'PY'
+          from pathlib import Path
+          remappings = Path("remappings.txt")
+          lines = remappings.read_text().splitlines()
+          replaced = []
+          for line in lines:
+              if line.startswith("@rheo-fm="):
+                  replaced.append("@rheo-fm=.slither-stubs/rheo-fm")
+              else:
+                  replaced.append(line)
+          remappings.write_text("\n".join(replaced) + "\n")
+          PY
+
+      - name: Install Slither
+        run: |
+          python3 -m pip install --user slither-analyzer
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run Slither
-        uses: crytic/slither-action@v0.4.0
-        id: slither
-        with:
-          fail-on: low
-          solc-version: 0.8.23
-          slither-args: --exclude-dependencies
+        run: |
+          slither src --exclude-dependencies --fail-low
 
 
   solhint:
@@ -149,7 +256,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        mode: [assertion, property, medusa]
+        mode: ${{ fromJSON(github.event_name == 'pull_request' && '["medusa"]' || '["assertion","property","medusa"]') }}
 
     name: Invariants
     runs-on: ubuntu-latest
