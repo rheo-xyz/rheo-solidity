@@ -60,11 +60,10 @@ contract ForkProposeSafeTxMarketShutdownTest is ForkTest, Networks {
         // The fork test simulates governance execution of the shutdown bundle. Fund the
         // governance owner with enough borrow token so the shared-vault repayment deposit
         // cannot fail due to the treasury balance at the forked block.
-        deal(address(remainingMarket.data().underlyingBorrowToken), owner, 10_000_000e6);
+        IERC20Metadata underlyingBorrowToken = remainingMarket.data().underlyingBorrowToken;
+        deal(address(underlyingBorrowToken), owner, 10_000_000 * 10 ** underlyingBorrowToken.decimals());
 
-        _executeShutdown(
-            targets, datas, marketsToShutdown, remainingMarket, remainingMarket.data().underlyingBorrowToken
-        );
+        _executeShutdown(targets, datas, marketsToShutdown, remainingMarket, underlyingBorrowToken);
     }
 
     function _executeShutdown(
