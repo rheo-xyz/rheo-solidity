@@ -4,8 +4,13 @@ pragma solidity 0.8.23;
 import {Size} from "@src/market/Size.sol";
 import {State} from "@src/market/SizeStorage.sol";
 import {AccountingLibrary} from "@src/market/libraries/AccountingLibrary.sol";
+import {
+    CREDIT_POSITION_ID_START,
+    DEBT_POSITION_ID_START,
+    LoanLibrary,
+    LoanStatus
+} from "@src/market/libraries/LoanLibrary.sol";
 import {RiskLibrary} from "@src/market/libraries/RiskLibrary.sol";
-import {CREDIT_POSITION_ID_START, DEBT_POSITION_ID_START, LoanLibrary, LoanStatus} from "@src/market/libraries/LoanLibrary.sol";
 
 contract CryticSizeMock is Size {
     using LoanLibrary for State;

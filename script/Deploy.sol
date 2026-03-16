@@ -42,8 +42,8 @@ import {
     InitializeRiskConfigParams
 } from "@src/market/libraries/actions/Initialize.sol";
 
-import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {CryticSizeMock} from "@test/mocks/CryticSizeMock.sol";
+import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {USDC} from "@test/mocks/USDC.sol";
 import {WETH} from "@test/mocks/WETH.sol";
 
