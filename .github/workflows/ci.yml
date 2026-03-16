@@ -118,6 +118,9 @@ jobs:
         with:
           version: v1.3.5
 
+      - name: Remove rheo-fm for Slither
+        run: rm -rf lib/rheo-fm
+
       - name: Install Slither
         run: |
           python3 -m pip install --user slither-analyzer
