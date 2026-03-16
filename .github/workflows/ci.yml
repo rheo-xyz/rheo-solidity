@@ -142,17 +142,27 @@ jobs:
           // SPDX-License-Identifier: MIT
           pragma solidity 0.8.23;
 
-          struct CopyLimitOrderConfig {}
+          struct CopyLimitOrderConfig {
+              bool placeholder;
+          }
           EOF
 
           cat <<'EOF' > .slither-stubs/rheo-fm/src/market/libraries/actions/Initialize.sol
           // SPDX-License-Identifier: MIT
           pragma solidity 0.8.23;
 
-          struct InitializeFeeConfigParams {}
-          struct InitializeRiskConfigParams {}
-          struct InitializeOracleParams {}
-          struct InitializeDataParams {}
+          struct InitializeFeeConfigParams {
+              bool placeholder;
+          }
+          struct InitializeRiskConfigParams {
+              bool placeholder;
+          }
+          struct InitializeOracleParams {
+              bool placeholder;
+          }
+          struct InitializeDataParams {
+              bool placeholder;
+          }
           EOF
 
           cat <<'EOF' > .slither-stubs/rheo-fm/src/collections/interfaces/ICollectionsManager.sol
