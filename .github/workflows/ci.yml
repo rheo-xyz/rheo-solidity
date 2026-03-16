@@ -118,32 +118,14 @@ jobs:
         with:
           version: v1.3.5
 
-      - name: Prebuild for Slither
-        shell: bash
+      - name: Install Slither
         run: |
-          forge clean
-          forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
-          if [ -d lib/ERC-7540-Reference/src ]; then
-            while IFS= read -r file; do
-              rel="${file#lib/ERC-7540-Reference/src/}"
-              target="src/$rel"
-              mkdir -p "$(dirname "$target")"
-              if [ ! -e "$target" ]; then
-                link="$(realpath --relative-to="$(dirname "$target")" "$file")"
-                ln -s "$link" "$target"
-              fi
-            done < <(find lib/ERC-7540-Reference/src -type f -name '*.sol')
-          fi
+          python3 -m pip install --user slither-analyzer
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Run Slither
-        uses: crytic/slither-action@v0.4.0
-        id: slither
-        with:
-          fail-on: low
-          solc-version: 0.8.23
-          slither-args: --exclude-dependencies
-          ignore-compile: true
-          target: src
+        run: |
+          slither src --exclude-dependencies --fail-low
 
 
   solhint:
