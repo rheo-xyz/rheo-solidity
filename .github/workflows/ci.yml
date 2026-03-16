@@ -118,11 +118,6 @@ jobs:
         with:
           version: v1.3.5
 
-      - name: Prebuild for Slither
-        run: |
-          forge clean
-          forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
-
       - name: Run Slither
         uses: crytic/slither-action@v0.4.0
         id: slither
@@ -130,7 +125,6 @@ jobs:
           fail-on: low
           solc-version: 0.8.23
           slither-args: --exclude-dependencies
-          ignore-compile: true
           target: src
 
 
