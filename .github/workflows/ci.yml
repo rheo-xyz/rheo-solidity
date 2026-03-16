@@ -120,6 +120,7 @@ jobs:
 
       - name: Prebuild for Slither
         run: |
+          forge clean
           forge build --build-info --skip ./test/** ./script/** ./lib/rheo-fm/** --force
 
       - name: Run Slither
@@ -130,6 +131,7 @@ jobs:
           solc-version: 0.8.23
           slither-args: --exclude-dependencies
           ignore-compile: true
+          target: src
 
 
   solhint:
