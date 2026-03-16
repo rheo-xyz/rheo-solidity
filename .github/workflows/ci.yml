@@ -256,7 +256,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        mode: [assertion, property, medusa]
+        mode: ${{ fromJSON(github.event_name == 'pull_request' && '["medusa"]' || '["assertion","property","medusa"]') }}
 
     name: Invariants
     runs-on: ubuntu-latest
