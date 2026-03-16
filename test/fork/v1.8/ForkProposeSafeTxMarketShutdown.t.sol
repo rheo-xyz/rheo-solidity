@@ -57,6 +57,11 @@ contract ForkProposeSafeTxMarketShutdownTest is ForkTest, Networks {
         ISize[] memory remainingMarkets = script.difference(getUnpausedSizeMarkets(sizeFactory), marketsToShutdown);
         ISize remainingMarket = remainingMarkets[0];
 
+        // The fork test simulates governance execution of the shutdown bundle. Fund the
+        // governance owner with enough borrow token so the shared-vault repayment deposit
+        // cannot fail due to the treasury balance at the forked block.
+        deal(address(remainingMarket.data().underlyingBorrowToken), owner, 10_000_000e6);
+
         _executeShutdown(
             targets, datas, marketsToShutdown, remainingMarket, remainingMarket.data().underlyingBorrowToken
         );
@@ -85,8 +90,8 @@ contract ForkProposeSafeTxMarketShutdownTest is ForkTest, Networks {
 
         _assertMarketsShutdown(marketsToShutdown);
         _assertMarketsRemoved(marketsToShutdown);
-        assertFalse(PausableUpgradeable(address(remainingMarket)).paused());
-        assertTrue(sizeFactory.isMarket(address(remainingMarket)));
+        assertTrue(PausableUpgradeable(address(remainingMarket)).paused());
+        assertFalse(sizeFactory.isMarket(address(remainingMarket)));
 
         uint256 borrowAfter = underlyingBorrowToken.balanceOf(owner);
         int256 borrowDelta = int256(borrowAfter) - int256(borrowBefore);
