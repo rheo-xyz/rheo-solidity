@@ -252,11 +252,12 @@ jobs:
         run: npm run solhint
 
   invariants:
+    if: github.event_name != 'pull_request'
     needs: [sizes, fmt, test, testFork, slither, solhint]
     strategy:
       fail-fast: true
       matrix:
-        mode: ${{ fromJSON(github.event_name == 'pull_request' && '["medusa"]' || '["assertion","property","medusa"]') }}
+        mode: [assertion, property, medusa]
 
     name: Invariants
     runs-on: ubuntu-latest
