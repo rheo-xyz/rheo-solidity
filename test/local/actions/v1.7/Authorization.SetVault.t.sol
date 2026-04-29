@@ -45,4 +45,48 @@ contract AuthorizationSetVaultTest is BaseTest {
             })
         );
     }
+
+    // Cantina #82: forfeit zeroes user shares irrecoverably; an authorized operator must not be
+    // able to trigger it on the principal's behalf, even with Action.SET_VAULT granted.
+    function test_AuthorizationSetVault_setVaultOnBehalfOf_forfeitOldShares_revertsForOperator() public {
+        _setAuthorization(alice, candy, Authorization.getActionsBitmap(Action.SET_VAULT));
+
+        vm.expectRevert(abi.encodeWithSelector(Errors.UNAUTHORIZED_ACTION.selector, candy, alice, Action.SET_VAULT));
+        vm.prank(candy);
+        size.setVaultOnBehalfOf(
+            SetVaultOnBehalfOfParams({
+                params: SetVaultParams({vault: address(vaultSolady), forfeitOldShares: true}),
+                onBehalfOf: alice
+            })
+        );
+    }
+
+    // Sanity check: the safe migration path (forfeitOldShares == false) is still callable by an
+    // authorized operator after the Cantina #82 fix.
+    function test_AuthorizationSetVault_setVaultOnBehalfOf_safeMigration_succeedsForOperator() public {
+        _setAuthorization(alice, candy, Authorization.getActionsBitmap(Action.SET_VAULT));
+
+        assertEq(size.data().borrowTokenVault.vaultOf(alice), address(0));
+
+        vm.prank(candy);
+        size.setVaultOnBehalfOf(
+            SetVaultOnBehalfOfParams({
+                params: SetVaultParams({vault: address(vaultSolady), forfeitOldShares: false}),
+                onBehalfOf: alice
+            })
+        );
+
+        assertEq(size.data().borrowTokenVault.vaultOf(alice), address(vaultSolady));
+    }
+
+    // The principal must retain the emergency-escape path: a self-call with forfeitOldShares=true
+    // continues to succeed so a user can move off a compromised vault without an operator.
+    function test_AuthorizationSetVault_setVault_forfeitOldShares_succeedsForPrincipal() public {
+        assertEq(size.data().borrowTokenVault.vaultOf(alice), address(0));
+
+        vm.prank(alice);
+        size.setVault(SetVaultParams({vault: address(vaultSolady), forfeitOldShares: true}));
+
+        assertEq(size.data().borrowTokenVault.vaultOf(alice), address(vaultSolady));
+    }
 }
