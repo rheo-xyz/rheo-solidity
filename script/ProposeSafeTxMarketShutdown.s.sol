@@ -101,8 +101,8 @@ contract ProposeSafeTxMarketShutdownScript is BaseScript, Networks {
 
         ShutdownPlan memory plan = _buildShutdownPlan(marketsToShutdown, remainingMarket);
 
-        uint256 totalCalls = marketsToShutdown.length + (plan.isRemainingEmpty ? 0 : 1) + 4
-            + (plan.depositAmount > 0 ? 3 : 0);
+        uint256 totalCalls =
+            marketsToShutdown.length + (plan.isRemainingEmpty ? 0 : 1) + 4 + (plan.depositAmount > 0 ? 3 : 0);
         targets = new address[](totalCalls);
         datas = new bytes[](totalCalls);
         uint256 index = 0;

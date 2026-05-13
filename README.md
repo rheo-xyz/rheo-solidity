@@ -263,6 +263,7 @@ Ensure your `.env` file in the root directory of your project contains the follo
 ```bash
 API_KEY_ALCHEMY=<Your Alchemy API Key>
 API_KEY_ETHERSCAN=<Your Etherscan API Key>
+API_KEY_ARBISCAN=<Your Arbiscan API Key>      # required for Arbitrum verification
 DEPLOYER_ADDRESS=<Deployer's Ethereum Address>
 DEPLOYER_ACCOUNT=<Name of the Deployer's Account in Foundry>
 OWNER=<Owner's Address>
@@ -282,6 +283,8 @@ cast wallet import DEPLOYER_ACCOUNT_NAME --private-key $(cast wallet new | grep 
 ### Network Configuration
 
 Ensure that the `NETWORK_CONFIGURATION` is set according to the network options you are deploying to. For example, you can create a configuration `base-mocks` and another `base-production` without mocks. Also, ensure that `RPC_URL` is set according to the network you are deploying to. In the previous case, both would be equal to `base` as in your `foundry.toml`. You can see the available network configuration in `script/Networks.sol`.
+
+Arbitrum deployments verify via Arbiscan — set `API_KEY_ARBISCAN` and use `RPC_URL=arbitrum-production` with `NETWORK_CONFIGURATION=arbitrum-production-weth-usdc`.
 
 You can set relevant `NetworkParams` to `address(0)` if you are deploying with mock contracts or require specific network parameters.
 

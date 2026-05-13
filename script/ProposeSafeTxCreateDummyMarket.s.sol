@@ -10,8 +10,9 @@ import {console} from "forge-std/console.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {DataView} from "@src/market/SizeViewData.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
-import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
+
 import {ISizeAdmin} from "@src/market/interfaces/ISizeAdmin.sol";
+import {ISizeView} from "@src/market/interfaces/ISizeView.sol";
 import {
     InitializeDataParams,
     InitializeFeeConfigParams,
@@ -115,9 +116,6 @@ contract ProposeSafeTxCreateDummyMarketScript is BaseScript, Networks {
 
         // Tx 1: Set debtTokenCap to 0 on the new market to prevent any borrowing
         targets[1] = predictedMarket;
-        datas[1] = abi.encodeCall(
-            ISizeAdmin.updateConfig,
-            (UpdateConfigParams({key: "debtTokenCap", value: 0}))
-        );
+        datas[1] = abi.encodeCall(ISizeAdmin.updateConfig, (UpdateConfigParams({key: "debtTokenCap", value: 0})));
     }
 }
