@@ -1,0 +1,12 @@
+{
+  "chainId": "42161",
+  "commit": "955ad64",
+  "deployments": {
+    "SizeFactory-implementation": "0x2109599EFB106f996cbc5dbd0ed0175A41B41ba5",
+    "SizeFactory-proxy": "0x63CF5fc3dD8bc915056854053774FD28947Deb64"
+  },
+  "networkConfiguration": "arbitrum-production-weth-usdc",
+  "parameters": {
+    "owner": "0x462b545e8bbb6f9e5860928748bfe9ecc712c3a7"
+  }
+}
