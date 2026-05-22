@@ -37,10 +37,12 @@ library SetVault {
             revert Errors.UNAUTHORIZED_ACTION(msg.sender, onBehalfOf, uint8(Action.SET_VAULT));
         }
 
-        // validate vault
-        // N/A
+        // Forfeit destroys the user's deposit unrecoverably; restrict to self-calls.
+        if (externalParams.params.forfeitOldShares && msg.sender != onBehalfOf) {
+            revert Errors.UNAUTHORIZED_ACTION(msg.sender, onBehalfOf, uint8(Action.SET_VAULT));
+        }
 
-        // validate forfeitOldShares
+        // validate vault
         // N/A
     }
 
