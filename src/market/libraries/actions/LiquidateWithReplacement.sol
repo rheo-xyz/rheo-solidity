@@ -167,10 +167,11 @@ library LiquidateWithReplacement {
             debtPosition.liquidityIndexAtRepayment
         );
 
-        state.data.debtToken.mint(params.borrower, debtPosition.futureValue);
-        if (state.data.debtToken.totalSupply() > state.data.debtTokenCap) {
-            revert Errors.DEBT_TOKEN_CAP_EXCEEDED(state.data.debtTokenCap, state.data.debtToken.totalSupply());
+        uint256 newDebtTokenSupply = state.data.debtToken.totalSupply() + debtPosition.futureValue;
+        if (newDebtTokenSupply > state.data.debtTokenCap) {
+            revert Errors.DEBT_TOKEN_CAP_EXCEEDED(state.data.debtTokenCap, newDebtTokenSupply);
         }
+        state.data.debtToken.mint(params.borrower, debtPosition.futureValue);
         state.data.borrowTokenVault.transferFrom(address(this), params.borrower, issuanceValue);
         state.data.borrowTokenVault.transferFrom(
             address(this), state.feeConfig.feeRecipient, liquidatorProfitBorrowToken

@@ -92,10 +92,11 @@ library AccountingLibrary {
             creditPositionId, lender, debtPositionId, RESERVED_ID, creditPosition.credit, creditPosition.forSale
         );
 
-        state.data.debtToken.mint(borrower, futureValue);
-        if (state.data.debtToken.totalSupply() > state.data.debtTokenCap) {
-            revert Errors.DEBT_TOKEN_CAP_EXCEEDED(state.data.debtTokenCap, state.data.debtToken.totalSupply());
+        uint256 newDebtTokenSupply = state.data.debtToken.totalSupply() + futureValue;
+        if (newDebtTokenSupply > state.data.debtTokenCap) {
+            revert Errors.DEBT_TOKEN_CAP_EXCEEDED(state.data.debtTokenCap, newDebtTokenSupply);
         }
+        state.data.debtToken.mint(borrower, futureValue);
     }
 
     /// @notice Creates a credit position by exiting an existing credit position

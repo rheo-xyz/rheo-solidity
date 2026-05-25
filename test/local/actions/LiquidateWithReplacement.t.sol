@@ -173,6 +173,30 @@ contract LiquidateWithReplacementTest is BaseTest {
         );
     }
 
+    function test_LiquidateWithReplacement_liquidateWithReplacement_debtTokenCap_exceeded() public {
+        _setPrice(1e18);
+        _updateConfig("swapFeeAPR", 0);
+        _updateConfig("liquidationRewardPercent", 0.1e18);
+        _deposit(alice, weth, 100e18);
+        _deposit(alice, usdc, 100e6);
+        _deposit(bob, weth, 100e18);
+        _deposit(bob, usdc, 100e6);
+        _deposit(candy, weth, 400e18);
+        _deposit(candy, usdc, 100e6);
+        _deposit(liquidator, weth, 100e18);
+        _deposit(liquidator, usdc, 100e6);
+        _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.03e18));
+        _sellCreditLimit(candy, block.timestamp + 365 days, 0.03e18, 365 days);
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, 15e6, 365 days, false);
+        uint256 futureValue = size.getDebtPosition(debtPositionId).futureValue;
+
+        _updateConfig("debtTokenCap", 10e6);
+        _setPrice(0.2e18);
+
+        vm.expectRevert(abi.encodeWithSelector(Errors.DEBT_TOKEN_CAP_EXCEEDED.selector, 10e6, futureValue));
+        _liquidateWithReplacement(liquidator, debtPositionId, candy);
+    }
+
     function test_LiquidateWithReplacement_liquidateWithReplacement_experiment() public {
         _setPrice(1e18);
 
