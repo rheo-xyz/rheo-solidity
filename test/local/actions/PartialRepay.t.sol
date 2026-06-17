@@ -1,18 +1,62 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {RESERVED_ID} from "@src/market/libraries/LoanLibrary.sol";
-
-import {BuyCreditLimitParams} from "@src/market/libraries/actions/BuyCreditLimit.sol";
-import {BuyCreditMarketParams} from "@src/market/libraries/actions/BuyCreditMarket.sol";
-import {PartialRepay} from "@src/market/libraries/actions/PartialRepay.sol";
+import {CREDIT_POSITION_ID_START, RESERVED_ID} from "@src/market/libraries/LoanLibrary.sol";
 
 import {PartialRepayParams} from "@src/market/libraries/actions/PartialRepay.sol";
-import {SellCreditLimitParams} from "@src/market/libraries/actions/SellCreditLimit.sol";
 import {BaseTest} from "@test/BaseTest.sol";
 import {YieldCurveHelper} from "@test/helpers/libraries/YieldCurveHelper.sol";
 
 contract PartialRepayTest is BaseTest {
+    function test_PartialRepay_borrower_can_cancel_acquired_credit_on_own_debt() public {
+        _setPrice(1e18);
+        _updateConfig("swapFeeAPR", 0);
+        _updateConfig("fragmentationFee", 0);
+
+        _deposit(alice, usdc, 200e6);
+        _deposit(bob, weth, 400e18);
+
+        // Alice first lends to Bob through the primary market.
+        _buyCreditLimit(alice, block.timestamp + 365 days, YieldCurveHelper.pointCurve(365 days, 0.5e18));
+        uint256 debtPositionId = _sellCreditMarket(bob, alice, RESERVED_ID, 120e6, 365 days, false);
+        uint256 aliceCreditPositionId = size.getCreditPositionIdsByDebtPositionId(debtPositionId)[0];
+
+        // Alice then offers that credit for sale on the secondary market.
+        _sellCreditLimit(alice, block.timestamp + 365 days, 0, 365 days);
+
+        // Bob deposits borrow tokens to acquire part of Alice's claim.
+        _deposit(bob, usdc, 100e6);
+        uint256 bobBorrowBeforeBuy = size.getUserView(bob).borrowTokenBalance;
+        uint256 bobDebtBeforeRepay = size.getUserView(bob).debtBalance;
+        uint256 aliceBorrowBeforeBuy = size.getUserView(alice).borrowTokenBalance;
+
+        _buyCreditMarket(bob, aliceCreditPositionId, 70e6, false);
+        (, uint256 creditPositionsCountAfterBuy) = size.getPositionsCount();
+
+        uint256 bobCreditPositionId = CREDIT_POSITION_ID_START + creditPositionsCountAfterBuy - 1;
+        uint256 bobBorrowAfterBuy = size.getUserView(bob).borrowTokenBalance;
+        uint256 aliceBorrowAfterBuy = size.getUserView(alice).borrowTokenBalance;
+
+        // Buying the credit is the economic purchase step: Bob pays cash and becomes lender of a
+        // credit position backed by his own debt.
+        assertEq(size.getCreditPosition(bobCreditPositionId).lender, bob);
+        assertEq(size.getCreditPosition(bobCreditPositionId).debtPositionId, debtPositionId);
+        assertEq(size.getCreditPosition(bobCreditPositionId).credit, 70e6);
+        assertLt(bobBorrowAfterBuy, bobBorrowBeforeBuy);
+        assertGt(aliceBorrowAfterBuy, aliceBorrowBeforeBuy);
+
+        uint256 bobBorrowBeforePartialRepay = size.getUserView(bob).borrowTokenBalance;
+
+        // This is intended behavior: once Bob holds credit on his own debt, `partialRepay`
+        // cancels that acquired claim and reduces debt. The economic cost was already paid
+        // during `buyCreditMarket`; `partialRepay` is not a second market purchase.
+        _partialRepay(bob, bobCreditPositionId, 70e6, bob);
+
+        assertEq(size.getUserView(bob).borrowTokenBalance, bobBorrowBeforePartialRepay);
+        assertEq(size.getUserView(bob).debtBalance, bobDebtBeforeRepay - 70e6);
+        assertEq(size.getCreditPosition(bobCreditPositionId).credit, 0);
+    }
+
     function test_PartialRepay_partialRepay_reduces_repaid_loan_debt_and_loan_credit() public {
         _setPrice(1e18);
         _updateConfig("swapFeeAPR", 0);

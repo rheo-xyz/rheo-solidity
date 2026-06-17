@@ -10,6 +10,7 @@ import {TargetFunctions} from "@test/invariants/TargetFunctions.sol";
 // medusa fuzz
 contract CryticTester is TargetFunctions, SetupLocal, CryticAsserts {
     constructor() {
+        reducedDeploymentForInvariantFuzzing = true;
         setup();
     }
 }

@@ -42,6 +42,7 @@ import {
     InitializeRiskConfigParams
 } from "@src/market/libraries/actions/Initialize.sol";
 
+import {CryticSizeMock} from "@test/mocks/CryticSizeMock.sol";
 import {SizeMock} from "@test/mocks/SizeMock.sol";
 import {USDC} from "@test/mocks/USDC.sol";
 import {WETH} from "@test/mocks/WETH.sol";
@@ -94,6 +95,7 @@ abstract contract Deploy {
     CollectionsManager internal collectionsManager;
 
     bool internal shouldDeploySizeFactory = true;
+    bool internal reducedDeploymentForInvariantFuzzing;
 
     IERC4626 internal vaultSolady;
     IERC4626 internal vaultOpenZeppelin;
@@ -187,7 +189,7 @@ abstract contract Deploy {
             sizeFactory: address(sizeFactory)
         });
 
-        implementation = address(new SizeMock());
+        implementation = reducedDeploymentForInvariantFuzzing ? address(new CryticSizeMock()) : address(new SizeMock());
         hevm.prank(owner);
         sizeFactory.setSizeImplementation(implementation);
 
@@ -315,6 +317,9 @@ abstract contract Deploy {
     function _deployVaults() internal {
         vaultSolady = IERC4626(address(new ERC4626Solady(address(usdc), "VaultSolady", "VAULTSOLADY", true, 0)));
         vaultOpenZeppelin = IERC4626(address(new ERC4626OpenZeppelin(address(usdc))));
+        if (reducedDeploymentForInvariantFuzzing) {
+            return;
+        }
         vaultSolmate =
             IERC4626(address(new ERC4626Solmate(ERC20Solmate(address(usdc)), "VaultSolmate", "VAULTSOLMATE")));
         vaultMaliciousWithdrawNotAllowed = IERC4626(

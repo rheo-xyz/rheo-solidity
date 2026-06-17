@@ -144,6 +144,29 @@ A non-exhaustive list of the risks of improper authorization includes:
 
 Because of the related risks, a recommended pattern is to authorize pre-vetted smart contracts in the beginning of a `multicall` operation, and revoke the authorization at the end of it. This way, the strategy contract will not hold any funds or credit on behalf of the user, and will be only responsible for specific actions during a limited time.
 
+#### Debt reduction: `partialRepay` vs `compensate`
+
+`partialRepay` and `compensate` are intentionally different operations and should not be treated as interchangeable debt-reduction paths.
+
+- `partialRepay` is a permissionless repayment primitive tied to a specific `CreditPosition`.
+- `compensate` is a structured credit-netting operation between two `CreditPosition`s held across one or more loans.
+
+The extra restrictions enforced by `compensate` exist because it transforms the protocol's credit structure across positions and maturities. Those restrictions are not intended to apply to every debt reduction.
+
+`partialRepay` should be understood as reducing debt against the selected lender's claim. If the payer is also the lender of that `CreditPosition`, the operation is economically a cancellation of self-held credit rather than a second market purchase.
+
+Worked example:
+
+1. Alice holds a `CreditPosition` against Bob's debt.
+2. Bob buys Alice's `CreditPosition` on the secondary market through `buyCreditMarket`, paying the market price for that claim.
+3. Bob later calls `partialRepay` on the acquired `CreditPosition`.
+4. Bob's debt is reduced by the repaid amount and the selected `CreditPosition` is reduced by the same amount.
+5. Alice has already been paid through the secondary-market trade; the `partialRepay` step is the cancellation of credit now held by Bob.
+
+In other words, when a borrower acquires their own debt on the secondary market and later uses `partialRepay` against that acquired `CreditPosition`, the economic cost is the acquisition cost paid during `buyCreditMarket`, not a second cash purchase during `partialRepay`.
+
+By contrast, `compensate` should be used when the borrower is netting one credit position they hold against a different credit position backing debt they owe. Because that operation restructures claims between positions, `compensate` applies additional authorization, lifecycle, due-date, and fee constraints that are specific to cross-position netting.
+
 #### Custom vaults
 
 Since v1.8, users can select variable pools in addition to Aave to deposit underlying borrow tokens to earn variable yield while their limit orders on the orderbook remain unmatched. This can be done through the `setUserConfiguration` call, which introduces a new `vault` parameter (a breaking change from the previous version). This parameter is used to `setVault` on the `NonTransferrableRebasingTokenVault` contract (e.g., svUSDC), an upgrade from the previous `NonTransferrableScaledTokenV1_5` (e.g., saUSDC) introduced in v1.5. If not set, the default vault is Aave.
