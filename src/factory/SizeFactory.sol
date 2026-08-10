@@ -159,6 +159,19 @@ contract SizeFactory is
     }
 
     /// @inheritdoc ISizeFactory
+    function addMarket(address market) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (market == address(0)) {
+            revert Errors.NULL_ADDRESS();
+        }
+        if (markets.contains(market) || !_isMarketLike(market)) {
+            revert Errors.INVALID_MARKET(market);
+        }
+        // slither-disable-next-line unused-return
+        markets.add(market);
+        emit AddMarket(market);
+    }
+
+    /// @inheritdoc ISizeFactory
     function removeMarket(address market) external onlyRole(DEFAULT_ADMIN_ROLE) {
         if (!markets.contains(market)) {
             revert Errors.INVALID_MARKET(market);
