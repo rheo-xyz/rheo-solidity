@@ -124,6 +124,21 @@ abstract contract SizeFactoryOffchainGetters is ISizeFactoryOffchainGetters, Siz
         return (Math.mulDivDown(100, crLiquidation, PERCENT), true);
     }
 
+    /// @notice Check if an address looks like a Size or Rheo market
+    /// @dev Sanity check used before registering an existing market, so that an unrelated contract cannot be
+    ///        registered as a market by mistake. It is not a proof of provenance: the DEFAULT_ADMIN_ROLE is
+    ///        trusted, since it can also upgrade the market implementations
+    function _isMarketLike(address market) internal view returns (bool) {
+        (address collateralToken, address borrowToken, bool hasData) = _tryGetMarketData(market);
+        if (!hasData || collateralToken == address(0) || borrowToken == address(0)) {
+            return false;
+        }
+        (, bool hasRiskConfig) = _tryGetCrLiquidationPercent(market);
+        // slither-disable-next-line calls-loop
+        (bool hasVersion,) = market.staticcall(abi.encodeWithSelector(VERSION_SELECTOR));
+        return hasRiskConfig && hasVersion;
+    }
+
     function _isRheoMarket(address market) internal view returns (bool) {
         // Size markets return (address,uint64) for oracle(), while Rheo markets return (address).
         // slither-disable-next-line calls-loop

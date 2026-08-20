@@ -193,6 +193,46 @@ contract SizeFactoryTest is BaseTest {
         assertTrue(!sizeFactory.isMarket(market));
     }
 
+    function test_SizeFactory_addMarket_re_registers_a_removed_market() public {
+        vm.prank(owner);
+        address market = address(sizeFactory.createMarket(f, r, o, d));
+
+        vm.prank(owner);
+        sizeFactory.removeMarket(market);
+        assertTrue(!sizeFactory.isMarket(market));
+
+        vm.prank(owner);
+        sizeFactory.addMarket(market);
+
+        assertEq(sizeFactory.getMarketsCount(), 2);
+        assertTrue(sizeFactory.isMarket(market));
+    }
+
+    function test_SizeFactory_addMarket_revert_on_unauthorized() public {
+        vm.prank(address(0x123));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(0x123), 0x00)
+        );
+        sizeFactory.addMarket(address(size));
+    }
+
+    function test_SizeFactory_addMarket_revert_on_already_registered_market() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(Errors.INVALID_MARKET.selector, address(size)));
+        sizeFactory.addMarket(address(size));
+    }
+
+    function test_SizeFactory_addMarket_revert_on_non_market() public {
+        address notAMarket = address(new MockERC20("Mock Token A", "MTA", 18));
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(Errors.INVALID_MARKET.selector, notAMarket));
+        sizeFactory.addMarket(notAMarket);
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(Errors.NULL_ADDRESS.selector));
+        sizeFactory.addMarket(address(0));
+    }
+
     function test_SizeFactory_removeMarket_revert_on_unauthorized() public {
         vm.prank(address(0x123));
         vm.expectRevert(

@@ -63,7 +63,17 @@ interface ISizeFactory is ISizeFactoryOffchainGetters, ISizeFactoryV1_7, ISizeFa
     /// @return True if the candidate is a registered market
     function isMarket(address candidate) external view returns (bool);
 
+    /// @notice Adds an existing market to the registered markets
+    /// @dev Used to re-register a market that was removed by {removeMarket}, for example if it was shut down
+    ///        while it still owed assets to its users. A removed market loses its `onlyMarket` authorization
+    ///        on the shared borrow token vault, so re-adding it is the only way to settle those liabilities
+    ///        without upgrading the market
+    /// @param market The market to add
+    function addMarket(address market) external;
+
     /// @notice Removes a market from the registered markets
+    /// @dev The removed market can no longer call the shared borrow token vault, so any assets it still holds
+    ///        there become unreachable until it is re-registered with {addMarket}
     /// @param market The market to remove
     function removeMarket(address market) external;
 }
