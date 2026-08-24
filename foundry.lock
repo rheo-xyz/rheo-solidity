@@ -42,7 +42,10 @@
     "rev": "b3d4ad97035a8b9b7b661763c6aed51fcfe5a87a"
   },
   "lib/solidity-http": {
-    "rev": "0e15051882932d4cd9f46730f1bafef8c360d1b3"
+    "tag": {
+      "name": "v0.0.7",
+      "rev": "c1bdafefa34e4a5e581f4227dfed4efecc0d6d0e"
+    }
   },
   "lib/solmate": {
     "rev": "c93f7716c9909175d45f6ef80a34a650e2d24e56"

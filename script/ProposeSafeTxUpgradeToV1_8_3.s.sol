@@ -55,7 +55,7 @@ contract ProposeSafeTxUpgradeToV1_8_3Script is BaseScript, Networks {
     function getUpgradeToV1_8_3Data() public returns (address[] memory targets, bytes[] memory datas) {
         sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
 
-        ISize[] memory unpausedMarkets = getUnpausedMarkets(sizeFactory);
+        ISize[] memory unpausedMarkets = getUnpausedSizeMarkets(sizeFactory);
 
         Size newSizeImplementation = new Size();
         console.log("ProposeSafeTxUpgradeToV1_8_3Script: newSizeImplementation", address(newSizeImplementation));

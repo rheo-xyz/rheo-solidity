@@ -11,6 +11,7 @@ import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata
 import {Contract, Networks} from "@script/Networks.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
+import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {Size} from "@src/market/Size.sol";
 
 import {IMulticall} from "@src/market/interfaces/IMulticall.sol";
@@ -45,10 +46,9 @@ import {Safe} from "@safe-utils/Safe.sol";
 import {CollectionsManager as RheoCollectionsManager} from "@rheo-fm/src/collections/CollectionsManager.sol";
 import {ICollectionsManager as ICollectionsManagerRheo} from
     "@rheo-fm/src/collections/interfaces/ICollectionsManager.sol";
-import {IRheoFactory} from "@rheo-fm/src/factory/interfaces/IRheoFactory.sol";
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 
-contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
+contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
     using Safe for *;
 
     struct UpgradeCtx {
@@ -70,13 +70,13 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
 
     address signer;
     string derivationPath;
-    bool skipPropose;
+    bool isTestnet;
 
     modifier parseEnv() {
-        // Base Sepolia uses an EOA admin (no multisig). When SKIP_PROPOSE=true we execute the calls directly.
-        skipPropose = vm.envOr("SKIP_PROPOSE", false);
+        // Testnets use an EOA admin flow (no multisig), mainnets use Safe proposals.
+        isTestnet = _isTestnet(block.chainid);
 
-        if (!skipPropose) {
+        if (!isTestnet) {
             safe.initialize(contracts[block.chainid][Contract.SIZE_GOVERNANCE]);
             signer = vm.envAddress("SIGNER");
             derivationPath = vm.envString("LEDGER_PATH");
@@ -86,13 +86,13 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
     }
 
     function run() public parseEnv {
-        console.log("ProposeSafeTxUpgradeToV1_9Script");
+        console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script");
 
         // Broadcast is only used to deploy the new implementations and the new CollectionsManager proxy.
         vm.startBroadcast();
-        (address[] memory targets, bytes[] memory datas) = getUpgradeToV1_9Data();
+        (address[] memory targets, bytes[] memory datas) = getUpgradeToV1_9Part1Data();
 
-        if (skipPropose) {
+        if (isTestnet) {
             // Execute the calls directly (EOA admin flow).
             _execute(targets, datas);
             vm.stopBroadcast();
@@ -101,42 +101,46 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             safe.proposeTransactions(targets, datas, signer, derivationPath);
         }
 
-        console.log("ProposeSafeTxUpgradeToV1_9Script: done");
+        console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script: done");
     }
 
-    function getUpgradeToV1_9Data() public returns (address[] memory targets, bytes[] memory datas) {
+    function getUpgradeToV1_9Part1Data() public returns (address[] memory targets, bytes[] memory datas) {
         UpgradeCtx memory u;
         u.sizeFactory = SizeFactory(contracts[block.chainid][Contract.SIZE_FACTORY]);
         u.owner = contracts[block.chainid][Contract.SIZE_GOVERNANCE];
 
         // Legacy markets we will migrate (unpaused only).
-        u.legacyMarkets = getUnpausedMarkets(u.sizeFactory);
+        u.legacyMarkets = getUnpausedSizeMarkets(u.sizeFactory);
         require(u.legacyMarkets.length > 0, "no unpaused markets found");
 
         // New implementations to be referenced by the upgrade tx.
         u.newSizeFactoryImplementation = address(new SizeFactory());
-        console.log("ProposeSafeTxUpgradeToV1_9Script: newSizeFactoryImplementation", u.newSizeFactoryImplementation);
+        console.log(
+            "ProposeSafeTxUpgradeToV1_9_part_1_Script: newSizeFactoryImplementation", u.newSizeFactoryImplementation
+        );
 
         u.needsLegacySizeUpgrade = _needsLegacySizeUpgrade(u.legacyMarkets);
         if (u.needsLegacySizeUpgrade) {
             // Base Sepolia legacy markets are still v1.8 and must be upgraded before shutdown.
             u.newSizeImplementation = address(new Size());
-            console.log("ProposeSafeTxUpgradeToV1_9Script: newSizeImplementation", u.newSizeImplementation);
+            console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script: newSizeImplementation", u.newSizeImplementation);
         }
 
         u.newRheoImplementation = address(new Rheo());
-        console.log("ProposeSafeTxUpgradeToV1_9Script: newRheoImplementation", u.newRheoImplementation);
+        console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script: newRheoImplementation", u.newRheoImplementation);
 
         // Deploy a brand new Rheo FM CollectionsManager proxy and point SizeFactory to it.
         {
             address impl = address(new RheoCollectionsManager());
-            console.log("ProposeSafeTxUpgradeToV1_9Script: newCollectionsManagerImplementation", impl);
+            console.log("ProposeSafeTxUpgradeToV1_9_part_1_Script: newCollectionsManagerImplementation", impl);
             u.newCollectionsManagerProxy = address(
                 new ERC1967Proxy(
-                    impl, abi.encodeCall(RheoCollectionsManager.initialize, (IRheoFactory(address(u.sizeFactory))))
+                    impl, abi.encodeCall(RheoCollectionsManager.initialize, (ISizeFactory(address(u.sizeFactory))))
                 )
             );
-            console.log("ProposeSafeTxUpgradeToV1_9Script: newCollectionsManagerProxy", u.newCollectionsManagerProxy);
+            console.log(
+                "ProposeSafeTxUpgradeToV1_9_part_1_Script: newCollectionsManagerProxy", u.newCollectionsManagerProxy
+            );
         }
 
         // Group markets by underlying borrow token so we can:
@@ -166,13 +170,13 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             }
         }
 
-        u.maturities = _v1_9Maturities();
+        u.maturities = v1_9Maturities();
 
         // Count calls (roughly):
         // - Upgrade factory + set impls + set collections manager.
         // - For each legacy market: create Rheo market + shutdown (and pause for non-anchor markets).
         // - For each group: withdraw (always), pause anchor, plus approve+deposit+approve(0) if depositing.
-        // - Remove legacy markets from the factory registry.
+        // - Remove legacy markets from factory registry.
         uint256 totalCalls = 0;
         totalCalls += 1; // upgrade sizeFactory
         totalCalls += 1; // setRheoImplementation
@@ -186,7 +190,7 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         totalCalls += u.groups; // withdraw per group
         totalCalls += u.groups; // pause anchor per group
         totalCalls += u.depositGroups * 3; // approve + deposit + approve(0) for groups with non-zero balance
-        totalCalls += u.legacyMarkets.length; // removeMarket per legacy market
+        totalCalls += u.legacyMarkets.length; // remove legacy markets
 
         targets = new address[](totalCalls);
         datas = new bytes[](totalCalls);
@@ -289,7 +293,8 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
             }
         }
 
-        // 6) Remove legacy markets from SizeFactory (after shutdown/pause so borrowTokenVault transfers still work).
+        // 6) Remove legacy markets from SizeFactory/factory registry
+        //    (after shutdown/pause so borrowTokenVault transfers still work).
         for (uint256 i = 0; i < u.legacyMarkets.length; i++) {
             targets[k] = address(u.sizeFactory);
             datas[k] = abi.encodeCall(SizeFactory.removeMarket, (address(u.legacyMarkets[i])));
@@ -358,15 +363,25 @@ contract ProposeSafeTxUpgradeToV1_9Script is BaseScript, Networks {
         revert("borrow token group not found");
     }
 
-    function _v1_9Maturities() internal pure returns (uint256[] memory maturities) {
-        // 1st of each month for 6 months, starting March 1st 2026 (UTC).
-        maturities = new uint256[](6);
-        maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00
-        maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00
-        maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00
-        maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00
-        maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00
-        maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00
+    function v1_9Maturities() public view returns (uint256[] memory maturities) {
+        if (block.chainid == BASE_SEPOLIA) {
+            // Testnet schedule.
+            maturities = new uint256[](6);
+            maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00
+            maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00
+            maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00
+            maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00
+            maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00
+            maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00
+            return maturities;
+        }
+
+        // Production schedule (non-testnet).
+        maturities = new uint256[](4);
+        maturities[0] = 1_774_598_400; // 2026-03-27 08:00:00
+        maturities[1] = 1_782_460_800; // 2026-06-26 08:00:00
+        maturities[2] = 1_790_323_200; // 2026-09-25 08:00:00
+        maturities[3] = 1_798_704_000; // 2026-12-31 08:00:00
     }
 
     function _buildCreateMarketRheoCall(SizeFactory sizeFactory, ISize legacy, uint256[] memory maturities)

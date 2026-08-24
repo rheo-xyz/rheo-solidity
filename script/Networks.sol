@@ -3,6 +3,8 @@ pragma solidity 0.8.23;
 
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+
+import {IRheo} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
 
@@ -47,8 +49,13 @@ abstract contract Networks {
     uint256 public constant ETHEREUM_MAINNET = 1;
     uint256 public constant BASE_MAINNET = 8453;
     uint256 public constant BASE_SEPOLIA = 84532;
+    uint256 public constant ARBITRUM_MAINNET = 42161;
 
     mapping(uint256 => mapping(Contract => address)) public contracts;
+
+    function _isTestnet(uint256 chainId) internal pure returns (bool) {
+        return chainId == BASE_SEPOLIA;
+    }
 
     constructor() {
         contracts[ETHEREUM_MAINNET][Contract.WETH] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
@@ -67,6 +74,12 @@ abstract contract Networks {
             0x3A7bB36Ee3f3eE32A60e9f2b33c1e5f2E83ad766;
         contracts[BASE_MAINNET][Contract.MORPHO_CHAINLINK_ORACLE_V2_FACTORY] = address(0);
         contracts[BASE_SEPOLIA][Contract.MORPHO_CHAINLINK_ORACLE_V2_FACTORY] = address(0);
+
+        contracts[ARBITRUM_MAINNET][Contract.WETH] = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+        contracts[ARBITRUM_MAINNET][Contract.SIZE_FACTORY] = 0x63CF5fc3dD8bc915056854053774FD28947Deb64;
+        contracts[ARBITRUM_MAINNET][Contract.SIZE_GOVERNANCE] = 0x462B545e8BBb6f9E5860928748Bfe9eCC712c3a7;
+        // TODO: set after Phase 2 Market deploy
+        contracts[ARBITRUM_MAINNET][Contract.MORPHO_CHAINLINK_ORACLE_V2_FACTORY] = address(0);
     }
 
     function params(string memory networkConfiguration) public pure returns (NetworkConfiguration memory) {
@@ -229,6 +242,29 @@ abstract contract Networks {
                     baseStalePriceInterval: 86400 * 1.1e18 / 1e18,
                     quoteStalePriceInterval: 86400 * 1.1e18 / 1e18,
                     sequencerUptimeFeed: AggregatorV3Interface(0xBCF85224fc0756B9Fa45aA7892530B47e10b6433)
+                })
+            });
+        } else if (Strings.equal(networkConfiguration, "arbitrum-production-weth-usdc")) {
+            return NetworkConfiguration({
+                weth: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1,
+                underlyingCollateralToken: 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1,
+                underlyingBorrowToken: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831,
+                variablePool: 0x794a61358D6845594F94dc1DB02A252b5b4814aD,
+                fragmentationFee: 1e6,
+                crOpening: 1.5e18,
+                crLiquidation: 1.3e18,
+                minimumCreditBorrowToken: 10e6,
+                priceFeedParams: PriceFeedParams({
+                    twapWindow: 10 minutes,
+                    averageBlockTime: 1 seconds,
+                    uniswapV3Pool: IUniswapV3Pool(0xC6962004f452bE9203591991D15f6b388e09E8D0),
+                    baseToken: IERC20Metadata(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1),
+                    quoteToken: IERC20Metadata(0xaf88d065e77c8cC2239327C5EDb3A432268e5831),
+                    baseAggregator: AggregatorV3Interface(0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612),
+                    quoteAggregator: AggregatorV3Interface(0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3),
+                    baseStalePriceInterval: 86400 * 1.1e18 / 1e18,
+                    quoteStalePriceInterval: 86400 * 1.1e18 / 1e18,
+                    sequencerUptimeFeed: AggregatorV3Interface(0xFdB631F5EE196F0ed6FAa767959853A9F217697D)
                 })
             });
         } else if (Strings.equal(networkConfiguration, "arbitrum-production-susde-usdc")) {
@@ -518,7 +554,7 @@ abstract contract Networks {
         quoteToken = IERC20Metadata(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
     }
 
-    function getUnpausedMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
+    function getUnpausedSizeMarkets(ISizeFactory _sizeFactory) public view returns (ISize[] memory markets) {
         address[] memory marketAddresses = _sizeFactory.getMarkets();
         bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
         markets = new ISize[](marketAddresses.length);
@@ -532,6 +568,21 @@ abstract contract Networks {
             }
         }
         _unsafeSetLength(markets, j);
+    }
+
+    function getUnpausedRheoMarkets(ISizeFactory _sizeFactory) public view returns (IRheo[] memory markets) {
+        address[] memory marketAddresses = _sizeFactory.getMarkets();
+        bool isFactoryV1_9 = _isFactoryV1_9(_sizeFactory);
+        markets = new IRheo[](marketAddresses.length);
+        uint256 j = 0;
+        for (uint256 i = 0; i < marketAddresses.length; i++) {
+            if (!PausableUpgradeable(marketAddresses[i]).paused()) {
+                if (!isFactoryV1_9 || _sizeFactory.isRheoMarket(marketAddresses[i])) {
+                    markets[j++] = IRheo(payable(marketAddresses[i]));
+                }
+            }
+        }
+        _unsafeSetLengthRheo(markets, j);
     }
 
     function _isFactoryV1_9(ISizeFactory sizeFactory) internal view returns (bool) {
@@ -552,6 +603,12 @@ abstract contract Networks {
     }
 
     function _unsafeSetLength(ISize[] memory markets, uint256 length) internal pure {
+        assembly ("memory-safe") {
+            mstore(markets, length)
+        }
+    }
+
+    function _unsafeSetLengthRheo(IRheo[] memory markets, uint256 length) internal pure {
         assembly ("memory-safe") {
             mstore(markets, length)
         }

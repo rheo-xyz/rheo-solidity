@@ -5,7 +5,8 @@ import {Test} from "forge-std/Test.sol";
 
 import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata.s.sol";
 import {Contract, Networks} from "@script/Networks.sol";
-import {ProposeSafeTxUpgradeToV1_9Script} from "@script/ProposeSafeTxUpgradeToV1_9.s.sol";
+import {ProposeSafeTxUpgradeToV1_9_part_1_Script} from "@script/ProposeSafeTxUpgradeToV1_9_part_1.s.sol";
+import {ProposeSafeTxUpgradeToV1_9_part_2_Script} from "@script/ProposeSafeTxUpgradeToV1_9_part_2.s.sol";
 
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
 import {ISize} from "@src/market/interfaces/ISize.sol";
@@ -24,6 +25,9 @@ import {SellCreditMarketParams} from "@rheo-fm/src/market/libraries/actions/Sell
 import {DebtPosition, RESERVED_ID} from "@rheo-fm/src/market/libraries/LoanLibrary.sol";
 
 abstract contract ForkUpgradeToV1_9Base is Test, Networks {
+    uint256 internal constant RHEO_OVERDUE_LIQUIDATION_REWARD_SLOT = 29;
+    uint256 internal constant OVERDUE_LIQUIDATION_REWARD_PERCENT = 0.01e18;
+
     address internal factoryOwner;
     SizeFactory internal factory;
 
@@ -39,16 +43,6 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         vm.label(factoryOwner, "FactoryOwner");
         vm.label(lender, "lender");
         vm.label(borrower, "borrower");
-    }
-
-    function _v1_9Maturities() internal pure returns (uint256[] memory maturities) {
-        maturities = new uint256[](6);
-        maturities[0] = 1_772_323_200; // 2026-03-01 00:00:00 UTC
-        maturities[1] = 1_775_001_600; // 2026-04-01 00:00:00 UTC
-        maturities[2] = 1_777_593_600; // 2026-05-01 00:00:00 UTC
-        maturities[3] = 1_780_272_000; // 2026-06-01 00:00:00 UTC
-        maturities[4] = 1_782_864_000; // 2026-07-01 00:00:00 UTC
-        maturities[5] = 1_785_542_400; // 2026-08-01 00:00:00 UTC
     }
 
     function _fundGovernanceForFullShutdown(ISize[] memory legacyMarkets) internal {
@@ -117,6 +111,24 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         revert("WETH/* market not found");
     }
 
+    function _overdueLiquidationRewardPercent(IRheo market) internal view returns (uint256) {
+        return uint256(market.extSload(bytes32(RHEO_OVERDUE_LIQUIDATION_REWARD_SLOT)));
+    }
+
+    function _assertOverdueLiquidationRewardSetForUnpausedMarkets() internal view {
+        address[] memory markets = factory.getMarkets();
+        uint256 unpausedMarketsCount = 0;
+        for (uint256 i = 0; i < markets.length; i++) {
+            if (PausableUpgradeable(markets[i]).paused()) {
+                continue;
+            }
+            unpausedMarketsCount++;
+            assertTrue(factory.isRheoMarket(markets[i]));
+            assertEq(_overdueLiquidationRewardPercent(IRheo(payable(markets[i]))), OVERDUE_LIQUIDATION_REWARD_PERCENT);
+        }
+        assertGt(unpausedMarketsCount, 0);
+    }
+
     function _assertMigrationEffects(ISize[] memory legacyMarkets) internal view {
         // Legacy markets should be paused and removed from the factory registry.
         for (uint256 i = 0; i < legacyMarkets.length; i++) {
@@ -128,13 +140,12 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         assertEq(factory.getMarketsCount(), legacyMarkets.length);
     }
 
-    function _smokeRheoMarket(IRheo market) internal {
+    function _smokeRheoMarket(IRheo market, uint256[] memory maturities) internal {
         assertEq(market.version(), RHEO_VERSION);
 
         IERC20Metadata coll = market.data().underlyingCollateralToken;
         IERC20Metadata borrowTok = market.data().underlyingBorrowToken;
 
-        uint256[] memory maturities = _v1_9Maturities();
         uint256[] memory aprs = new uint256[](maturities.length);
         for (uint256 i = 0; i < aprs.length; i++) {
             aprs[i] = 0.1e18;
@@ -201,18 +212,34 @@ abstract contract ForkUpgradeToV1_9Base is Test, Networks {
         assertGt(debtAfter.liquidityIndexAtRepayment, 0);
     }
 
+    function _assertPart1Effects(ISize[] memory legacyMarkets) internal view {
+        // After part 1, legacy markets should be paused and removed from the factory registry.
+        for (uint256 i = 0; i < legacyMarkets.length; i++) {
+            assertTrue(PausableUpgradeable(address(legacyMarkets[i])).paused());
+            assertFalse(factory.isMarket(address(legacyMarkets[i])));
+        }
+    }
+
     function _runForkMigrationAndSmoke() internal {
-        ISize[] memory legacyMarkets = getUnpausedMarkets(factory);
+        ISize[] memory legacyMarkets = getUnpausedSizeMarkets(factory);
         _fundGovernanceForFullShutdown(legacyMarkets);
 
-        ProposeSafeTxUpgradeToV1_9Script script = new ProposeSafeTxUpgradeToV1_9Script();
-        (address[] memory targets, bytes[] memory datas) = script.getUpgradeToV1_9Data();
-        _execAsOwner(targets, datas);
+        ProposeSafeTxUpgradeToV1_9_part_1_Script scriptPart1 = new ProposeSafeTxUpgradeToV1_9_part_1_Script();
+        (address[] memory migrationTargetsPart1, bytes[] memory migrationDatasPart1) =
+            scriptPart1.getUpgradeToV1_9Part1Data();
+        _execAsOwner(migrationTargetsPart1, migrationDatasPart1);
+        _assertPart1Effects(legacyMarkets);
+
+        ProposeSafeTxUpgradeToV1_9_part_2_Script scriptPart2 = new ProposeSafeTxUpgradeToV1_9_part_2_Script();
+        (address[] memory migrationTargetsPart2, bytes[] memory migrationDatasPart2) =
+            scriptPart2.getUpgradeToV1_9Part2Data();
+        _execAsOwner(migrationTargetsPart2, migrationDatasPart2);
 
         _assertMigrationEffects(legacyMarkets);
+        _assertOverdueLiquidationRewardSetForUnpausedMarkets();
 
         IRheo wethMarket = _findRheoMarketWethUsdc();
-        _smokeRheoMarket(wethMarket);
+        _smokeRheoMarket(wethMarket, scriptPart1.v1_9Maturities());
     }
 }
 
