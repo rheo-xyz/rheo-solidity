@@ -6,7 +6,6 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {
     InitializeDataParams as InitializeDataParamsRheo,
     InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
     InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
 } from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
@@ -15,7 +14,6 @@ interface IRheoInitializer {
         address owner,
         InitializeFeeConfigParamsRheo calldata f,
         InitializeRiskConfigParamsRheo calldata r,
-        InitializeOracleParamsRheo calldata o,
         InitializeDataParamsRheo calldata d
     ) external;
 }
@@ -26,11 +24,10 @@ library RheoMarketFactoryLibrary {
         address owner,
         InitializeFeeConfigParamsRheo calldata f,
         InitializeRiskConfigParamsRheo calldata r,
-        InitializeOracleParamsRheo calldata o,
         InitializeDataParamsRheo calldata d
     ) external returns (address market) {
         ERC1967Proxy proxy =
-            new ERC1967Proxy(implementation, abi.encodeCall(IRheoInitializer.initialize, (owner, f, r, o, d)));
+            new ERC1967Proxy(implementation, abi.encodeCall(IRheoInitializer.initialize, (owner, f, r, d)));
         market = address(proxy);
     }
 }

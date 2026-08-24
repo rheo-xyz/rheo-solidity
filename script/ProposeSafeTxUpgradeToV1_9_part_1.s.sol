@@ -10,6 +10,7 @@ import {BaseScript} from "@script/BaseScript.sol";
 import {GetMarketShutdownCalldataScript} from "@script/GetMarketShutdownCalldata.s.sol";
 import {Contract, Networks} from "@script/Networks.sol";
 
+import {singleCollateralAsset} from "@rheo-fm/script/CollateralAssets.sol";
 import {SizeFactory} from "@src/factory/SizeFactory.sol";
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {Size} from "@src/market/Size.sol";
@@ -31,7 +32,6 @@ import {WithdrawParams} from "@src/market/libraries/actions/Withdraw.sol";
 import {
     InitializeDataParams as InitializeDataParamsRheo,
     InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
     InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
 } from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
@@ -392,11 +392,10 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _legacyToRheoParams(sizeFactory, legacy, maturities);
 
-        return abi.encodeCall(SizeFactory.createMarketRheo, (fRheo, rRheo, oRheo, dRheo));
+        return abi.encodeCall(SizeFactory.createMarketRheo, (fRheo, rRheo, dRheo));
     }
 
     function _legacyToRheoParams(SizeFactory sizeFactory, ISize legacy, uint256[] memory maturities)
@@ -405,7 +404,6 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
         returns (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         )
     {
@@ -431,11 +429,11 @@ contract ProposeSafeTxUpgradeToV1_9_part_1_Script is BaseScript, Networks {
             maturities: maturities
         });
 
-        oRheo = InitializeOracleParamsRheo({priceFeed: o.priceFeed});
-
         dRheo = InitializeDataParamsRheo({
             weth: contracts[block.chainid][Contract.WETH],
-            underlyingCollateralToken: address(legacy.data().underlyingCollateralToken),
+            // a legacy market carries a single collateral priced by a single feed, which is a one-asset
+            // basket under the Rheo FM v2.0 shape
+            collateralAssets: singleCollateralAsset(address(legacy.data().underlyingCollateralToken), o.priceFeed),
             underlyingBorrowToken: address(legacy.data().underlyingBorrowToken),
             variablePool: address(legacy.data().variablePool),
             borrowTokenVault: address(legacy.data().borrowTokenVault),

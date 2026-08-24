@@ -22,7 +22,6 @@ import {
 import {
     InitializeDataParams as InitializeDataParamsRheo,
     InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
     InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
 } from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 
@@ -37,6 +36,7 @@ import {ISize} from "@src/market/interfaces/ISize.sol";
 
 import {ISizeFactory} from "@src/factory/interfaces/ISizeFactory.sol";
 import {ISizeFactoryV1_9} from "@src/factory/interfaces/ISizeFactoryV1_9.sol";
+import {ISizeFactoryV2} from "@src/factory/interfaces/ISizeFactoryV2.sol";
 import {MarketFactoryLibrary} from "@src/factory/libraries/MarketFactoryLibrary.sol";
 import {RheoMarketFactoryLibrary} from "@src/factory/libraries/RheoMarketFactoryLibrary.sol";
 
@@ -142,16 +142,15 @@ contract SizeFactory is
         emit CreateMarket(address(market));
     }
 
-    /// @inheritdoc ISizeFactoryV1_9
+    /// @inheritdoc ISizeFactoryV2
     function createMarketRheo(
         InitializeFeeConfigParamsRheo calldata feeConfigParamsRheo,
         InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
-        InitializeOracleParamsRheo calldata oracleParamsRheo,
         InitializeDataParamsRheo calldata dataParamsRheo
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (address market) {
         address admin = msg.sender;
         market = RheoMarketFactoryLibrary.createMarketRheo(
-            rheoImplementation, admin, feeConfigParamsRheo, riskConfigParamsRheo, oracleParamsRheo, dataParamsRheo
+            rheoImplementation, admin, feeConfigParamsRheo, riskConfigParamsRheo, dataParamsRheo
         );
         // slither-disable-next-line unused-return
         markets.add(market);

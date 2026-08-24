@@ -1,27 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {
-    InitializeDataParams as InitializeDataParamsRheo,
-    InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
-    InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
-} from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
-
 /// @title ISizeFactoryV1_9
 /// @custom:security-contact security@size.credit
 /// @author Size (https://size.credit/)
 /// @notice The interface for the size factory v1.9
+/// @dev `createMarketRheo` moved to ISizeFactoryV2 in v2.0: Rheo FM markets now take a basket of collateral assets,
+///      which changed the initialization parameters.
 interface ISizeFactoryV1_9 {
-    /// @notice Creates a new Rheo FM market
-    /// @dev The contract owner is set as the owner of the market
-    function createMarketRheo(
-        InitializeFeeConfigParamsRheo calldata feeConfigParamsRheo,
-        InitializeRiskConfigParamsRheo calldata riskConfigParamsRheo,
-        InitializeOracleParamsRheo calldata oracleParamsRheo,
-        InitializeDataParamsRheo calldata dataParamsRheo
-    ) external returns (address);
-
     /// @notice Set the Rheo implementation
     /// @param _rheoImplementation The new Rheo implementation
     function setRheoImplementation(address _rheoImplementation) external;

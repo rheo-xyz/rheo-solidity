@@ -6,10 +6,10 @@ import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol"
 import {Rheo} from "@rheo-fm/src/market/Rheo.sol";
 import {VERSION} from "@rheo-fm/src/market/interfaces/IRheo.sol";
 
+import {singleCollateralAsset} from "@rheo-fm/script/CollateralAssets.sol";
 import {
     InitializeDataParams as InitializeDataParamsRheo,
     InitializeFeeConfigParams as InitializeFeeConfigParamsRheo,
-    InitializeOracleParams as InitializeOracleParamsRheo,
     InitializeRiskConfigParams as InitializeRiskConfigParamsRheo
 } from "@rheo-fm/src/market/libraries/actions/Initialize.sol";
 import {Errors} from "@src/market/libraries/Errors.sol";
@@ -33,7 +33,6 @@ contract SizeFactoryRheoTest is BaseTest {
         returns (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         )
     {
@@ -59,11 +58,9 @@ contract SizeFactoryRheoTest is BaseTest {
             maturities: maturities
         });
 
-        oRheo = InitializeOracleParamsRheo({priceFeed: address(priceFeed)});
-
         dRheo = InitializeDataParamsRheo({
             weth: address(weth),
-            underlyingCollateralToken: address(weth),
+            collateralAssets: singleCollateralAsset(address(weth), address(priceFeed)),
             underlyingBorrowToken: address(usdc),
             variablePool: address(variablePool),
             borrowTokenVault: d.borrowTokenVault,
@@ -79,12 +76,11 @@ contract SizeFactoryRheoTest is BaseTest {
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _defaultRheoParams();
 
         vm.prank(owner);
-        rheoMarket = sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+        rheoMarket = sizeFactory.createMarketRheo(fRheo, rRheo, dRheo);
     }
 
     function test_SizeFactory_setRheoImplementation_revert_on_unauthorized() public {
@@ -121,7 +117,6 @@ contract SizeFactoryRheoTest is BaseTest {
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _defaultRheoParams();
 
@@ -129,27 +124,25 @@ contract SizeFactoryRheoTest is BaseTest {
         vm.expectRevert(
             abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, address(alice), 0x00)
         );
-        sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+        sizeFactory.createMarketRheo(fRheo, rRheo, dRheo);
     }
 
     function test_SizeFactory_createMarketRheo_revert_when_rheoImplementation_not_set() public {
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _defaultRheoParams();
 
         vm.prank(owner);
         vm.expectRevert();
-        sizeFactory.createMarketRheo(fRheo, rRheo, oRheo, dRheo);
+        sizeFactory.createMarketRheo(fRheo, rRheo, dRheo);
     }
 
     function test_SizeFactory_createMarketRheo_deploys_proxy_initializes_and_registers_market() public {
         (
             InitializeFeeConfigParamsRheo memory fRheo,
             InitializeRiskConfigParamsRheo memory rRheo,
-            InitializeOracleParamsRheo memory oRheo,
             InitializeDataParamsRheo memory dRheo
         ) = _defaultRheoParams();
         address market = _createRheoMarket();
@@ -174,13 +167,21 @@ contract SizeFactoryRheoTest is BaseTest {
             assertEq(marketProxy.riskConfig().maturities[i], rRheo.maturities[i]);
         }
 
-        assertEq(marketProxy.oracle().priceFeed, oRheo.priceFeed);
+        assertEq(marketProxy.oracle().priceFeed, dRheo.collateralAssets[0].priceFeed);
 
         assertEq(marketProxy.data().nextDebtPositionId, 0);
         assertEq(marketProxy.data().nextCreditPositionId, type(uint256).max / 2);
-        assertEq(address(marketProxy.data().underlyingCollateralToken), dRheo.underlyingCollateralToken);
+        assertEq(address(marketProxy.data().underlyingCollateralToken), dRheo.collateralAssets[0].underlying);
         assertEq(address(marketProxy.data().underlyingBorrowToken), dRheo.underlyingBorrowToken);
         assertEq(address(marketProxy.data().borrowTokenVault), dRheo.borrowTokenVault);
+
+        // the factory produces a v2.0 basket market: the registry is populated and mirrors the legacy fields
+        assertEq(marketProxy.getCollateralAssets().length, 1);
+        assertEq(
+            address(marketProxy.getCollateralAssets()[0].underlying), dRheo.collateralAssets[0].underlying
+        );
+        assertEq(address(marketProxy.getCollateralAssets()[0].priceFeed), dRheo.collateralAssets[0].priceFeed);
+        assertEq(marketProxy.getCollateralAssets()[0].cap, dRheo.collateralAssets[0].cap);
 
         string[] memory descriptions = sizeFactory.getMarketDescriptions();
         assertEq(descriptions.length, 2);
